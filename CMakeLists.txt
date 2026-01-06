@@ -1,19 +1,21 @@
 cmake_minimum_required(VERSION 3.16...3.28)
 
-project(noddy)
+project(noddy LANGUAGES CXX C)
 
 find_package(OpenGL REQUIRED)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Output directories
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+# Dependencies
 add_subdirectory(external/glfw)
 
-include_directories(external/glad/include)
-
-add_executable(noddy
-    src/main.cpp
-    external/glad/src/glad.c
-)
-
-target_link_libraries(noddy glfw OpenGL::GL)
-
+# Modules
+add_subdirectory(core)
+add_subdirectory(app)
