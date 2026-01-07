@@ -32,6 +32,8 @@ void main() {
 int main(void) {
   std::cout << "Initializing: " << Noddy::getCoreVersion() << '\n';
 
+  Noddy::test();
+
   if (!glfwInit())
     return -1;
 
