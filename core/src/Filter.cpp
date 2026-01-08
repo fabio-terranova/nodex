@@ -1,10 +1,6 @@
 #include "Filter.h"
+#include "Eigen/Core"
 #include <Eigen/Dense>
-#include <cassert>
-#include <cmath>
-#include <complex>
-#include <functional>
-#include <numbers>
 
 namespace Noddy {
 namespace Filter {
@@ -12,13 +8,64 @@ ArrayXi arange(const int start, int stop, const int step) {
   if (step == 0)
     return ArrayXi{};
 
-  int num{(stop - start + (step > 0 ? step - 1 : step + 1)) / step};
+  const int num{(stop - start + (step > 0 ? step - 1 : step + 1)) / step};
   if (num <= 0)
     return ArrayXi{};
 
-  int actualStop{start + (num - 1) * step};
+  const int actualStop{start + (num - 1) * step};
 
   return ArrayXi::LinSpaced(num, start, actualStop);
+}
+
+ZPK cheb1ap(const int n, const double rp) {
+  if (n == 0)
+    return {{}, {}, std::pow(10, -rp / 20.0)};
+
+  Eigen::ArrayXcd z{0};
+
+  const auto eps{std::sqrt(std::pow(10, 0.1 * rp) - 1)};
+  const auto mu{1.0 / n * std::asinh(1 / eps)};
+
+  const ArrayXd m{arange(-n + 1, n, 2).cast<double>()};
+  const auto    theta{pi * m / (2 * n)};
+  const auto    p{-(mu + 1i * theta).sinh()};
+
+  double k{std::real(-p.prod())};
+  if (n % 2 == 0)
+    k /= std::sqrt(1 + eps * eps);
+
+  return {z, p, k};
+}
+
+ZPK cheb2ap(const int n, const double rs) {
+  if (n == 0)
+    return {{}, {}, 1};
+
+  const auto de{1.0 / std::sqrt(std::pow(10, 0.1 * rs) - 1)};
+  const auto mu{std::asinh(1.0 / de) / n};
+
+  VectorXi m{};
+  if (n % 2) {
+    ArrayXi m1{arange(-n + 1, 0, 2)};
+    ArrayXi m2{arange(2, n, 2)};
+    m.conservativeResize(m1.size() + m2.size());
+    m << m1, m2;
+  } else {
+    m = arange(-n + 1, n, 2);
+  }
+
+  const VectorXcd z{
+      -(1i / (pi * m.cast<double>() / (2.0 * n)).array().sin()).conjugate()};
+
+  VectorXcd p{
+      -(1i * pi * arange(-n + 1, n, 2).cast<Complex>() / (2 * n)).exp(),
+  };
+  p = std::sinh(mu) * p.real() + 1i * std::cosh(mu) * p.imag();
+  p = p.cwiseInverse();
+
+  const double k{((-p).prod() / (-z).prod()).real()};
+
+  return ZPK{z, p, k};
 }
 
 ZPK buttap(const int n) {
@@ -29,24 +76,24 @@ ZPK buttap(const int n) {
   // m = 2k + n - 1
   // theta = pi * m / (2n)
   // p_k = -exp(j * theta)
-  ArrayXd  m{arange(-n + 1, n, 2).cast<double>()};
-  ArrayXd  theta{std::numbers::pi * m / (2 * n)};
-  ArrayXcd p{-(Complex(0.0, 1.0) * theta).exp()};
+  const ArrayXd  m{arange(-n + 1, n, 2).cast<double>()};
+  const ArrayXd  theta{pi * m / (2 * n)};
+  const ArrayXcd p{-(1i * theta).exp()};
 
   return ZPK{z, p, 1.0};
 }
 
 constexpr double warpFreq(const double fc, const double fs) {
-  return std::tan(std::numbers::pi * fc / fs);
+  return std::tan(pi * fc / fs);
 }
 
 ZPK bilinearTransform(const ZPK& analog, const double fs) {
   ZPK    digital{};
   double fs2{2.0 * fs};
 
-  long numZeros{analog.z.size()};
-  long numPoles{analog.p.size()};
-  long degree{numPoles - numZeros};
+  const long numZeros{analog.z.size()};
+  const long numPoles{analog.p.size()};
+  const long degree{numPoles - numZeros};
 
   // z = (2fs + s) / (2fs - s)
   if (numZeros > 0)
@@ -61,7 +108,7 @@ ZPK bilinearTransform(const ZPK& analog, const double fs) {
 
   if (degree > 0) {
     digital.z.conservativeResize(numPoles);
-    digital.z.tail(degree).setConstant(Complex{-1.0, 0.0});
+    digital.z.tail(degree).setConstant(-1.0);
   }
 
   // Recalculate gain
@@ -95,69 +142,14 @@ ZPK lp2hp(const ZPK& input, const double wc) {
   output.z.conservativeResize(output.z.size() + degree);
   output.z.tail(degree).setConstant(0);
 
-  output.k = input.k * std::real(input.z.prod() / input.p.prod());
+  output.k = input.k * std::real((-input.z).prod() / (-input.p).prod());
 
   return output;
 }
 
-ZPK iirFilter(const int n, double fc, double fs,
-              std::function<ZPK(const int)> filter, Type type = Type::lowPass) {
-  assert(type == Type::lowPass or
-         type == Type::highPass &&
-             "iirFilter(): Single frequency value provided but FilterType != "
-             "lowPass or highPass");
-
-  ZPK analog{filter(n)};
-
-  fc /= (fs / 2);
-
-  fs = 2.0;
-  const double warped{2.0 * fs * std::tan(std::numbers::pi * fc / fs)};
-
-  std::function<ZPK(const ZPK&, const double)> convFunc;
-  switch (type) {
-  case Type::lowPass:
-    convFunc = lp2lp;
-    break;
-  case Type::highPass:
-    convFunc = lp2hp;
-    break;
-  default:
-    break;
-  }
-  analog = convFunc(analog, warped);
-
-  return bilinearTransform(analog, fs);
-}
-
-// TODO integrate bandpass and bandstop
-ZPK iirFilter(const int n, Array2d fc, double fs,
-              std::function<ZPK(const int)> filter, Type type) {
-  ZPK analog{filter(n)};
-
-  fc /= (fs / 2);
-
-  fs = 2.0;
-  const Array2d warped{2.0 * fs * tan(std::numbers::pi * fc / fs)};
-
-  std::function<ZPK(const ZPK&, const double)> convFunc;
-  switch (type) {
-  case Type::bandPass:
-    convFunc = lp2lp;
-    break;
-  case Type::bandStop:
-  default:
-    break;
-  }
-
-  // analog = convFunc(analog, wc)
-
-  return bilinearTransform(analog, fs);
-}
-
 VectorXcd roots2poly(const VectorXcd& roots) {
   VectorXcd coeffs{1};
-  coeffs[0] = Complex{1.0, 0.0};
+  coeffs[0] = 1.0;
 
   for (int i{0}; i < roots.size(); ++i) {
     const Complex& r{roots[i]};
