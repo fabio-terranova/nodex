@@ -4,9 +4,6 @@
 #include <string>
 
 namespace Noddy {
-std::string getCoreVersion();
-
-void test();
 } // namespace Noddy
 
 #endif // INCLUDE_CORE_CORE_H_

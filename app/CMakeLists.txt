@@ -1,7 +1,7 @@
 find_package(OpenGL REQUIRED)
 
 add_executable(noddy_gui
-    src/main.cpp
+    ./src/main.cpp
     ${CMAKE_SOURCE_DIR}/external/glad/src/glad.c
 )
 
