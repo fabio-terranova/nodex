@@ -1,5 +1,4 @@
 #include "Filter.h"
-#include "Eigen/Core"
 #include <Eigen/Dense>
 
 namespace Noddy {
