@@ -19,7 +19,7 @@ ZPK cheb1ap(const int n, const double rp) {
   const auto    theta{pi * m / (2 * n)};
   const auto    p{-(mu + 1i * theta).sinh()};
 
-  double k{std::real(-p.prod())};
+  double k{std::real((-p).prod())};
   if (n % 2 == 0)
     k /= std::sqrt(1 + eps * eps);
 
