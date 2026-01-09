@@ -4,8 +4,6 @@
 
 namespace Noddy {
 namespace Core {
-std::string getCoreVersion() { return "Noddy Core v0.0.1"; }
-
 using SignalMatrix = Eigen::Matrix<double, 2, 2>;
 
 struct Signal {
