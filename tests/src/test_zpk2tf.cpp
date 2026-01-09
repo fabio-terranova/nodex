@@ -35,9 +35,9 @@ bool test_zpk2tf() {
 
   Coeffs result{zpk2tf(filter)};
 
-  // std::cout << "--- ZPK to transfer function coefficients ---" << '\n';
-  // std::cout << "Expected coeffs:\n" << expected << '\n';
-  // std::cout << "Result coeffs:\n" << result << '\n';
+  std::cout << "--- ZPK to transfer function coefficients ---" << '\n';
+  std::cout << "Expected coeffs:\n" << expected << '\n';
+  std::cout << "Result coeffs:\n" << result << '\n';
 
   return (expected != result);
 }
