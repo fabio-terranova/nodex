@@ -2,8 +2,8 @@
 #define INCLUDE_CORE_FILTER_H_
 
 #include <Eigen/Dense>
-#include <numbers>
 #include <cassert>
+#include <numbers>
 
 namespace Noddy {
 namespace Filter {
@@ -52,8 +52,9 @@ ZPK lp2hp(const ZPK& input, const double wc);
 inline ZPK analog2digital(ZPK analog, double fc, double fs,
                           Type type = Type::lowpass) {
   assert(type == Type::lowpass or
-         type == Type::highpass && "iirFilter(): only lowPass and highPass are "
-                                   "implemented for single cutoff frequency");
+         type == Type::highpass and
+             "iirFilter(): only lowPass and highPass are "
+             "implemented for single cutoff frequency");
 
   fc /= (fs / 2);
   fs = 2.0;
