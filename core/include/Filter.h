@@ -2,6 +2,7 @@
 #define INCLUDE_CORE_FILTER_H_
 
 #include <Eigen/Dense>
+#include <numbers>
 
 namespace Noddy {
 namespace Filter {

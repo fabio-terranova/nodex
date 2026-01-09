@@ -72,7 +72,7 @@ ZPK buttap(const int n) {
   return ZPK{z, p, 1.0};
 }
 
-constexpr double warpFreq(const double fc, const double fs) {
+double warpFreq(const double fc, const double fs) {
   return std::tan(pi * fc / fs);
 }
 
@@ -80,9 +80,9 @@ ZPK bilinearTransform(const ZPK& analog, const double fs) {
   ZPK    digital{};
   double fs2{2.0 * fs};
 
-  const long numZeros{analog.z.size()};
-  const long numPoles{analog.p.size()};
-  const long degree{numPoles - numZeros};
+  const auto numZeros{analog.z.size()};
+  const auto numPoles{analog.p.size()};
+  const auto degree{numPoles - numZeros};
 
   // z = (2fs + s) / (2fs - s)
   if (numZeros > 0)
