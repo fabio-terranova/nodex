@@ -7,6 +7,6 @@ add_library(noddy_core STATIC
 
 target_include_directories(noddy_core PUBLIC include)
 
-target_link_libraries(noddy_core PRIVATE
+target_link_libraries(noddy_core PUBLIC
     eigen
 )

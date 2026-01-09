@@ -1,9 +1,11 @@
-# Executable
-add_executable(noddy_test
-    ./src/test_filter.cpp
+set(TEST_NAMES
+    test_zpk2tf
+    test_filter
 )
 
-target_link_libraries(noddy_test PRIVATE
-    eigen
-    noddy_core
-)
+# Executables
+foreach(test_name ${TEST_NAMES})
+    add_executable(${test_name} ./src/${test_name}.cpp)
+    target_link_libraries(${test_name} PRIVATE noddy_core)
+    add_test(NAME ${test_name} COMMAND ${test_name})
+endforeach()
