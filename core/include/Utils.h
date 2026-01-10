@@ -3,11 +3,12 @@
 
 #include <Eigen/Dense>
 
-inline const Eigen::IOFormat g_cleanFmt(Eigen::StreamPrecision, 0, " ", "", "",
-                                        "", "[", "]");
 namespace Noddy {
 namespace Utils {
 using Eigen::ArrayXi;
+
+inline const Eigen::IOFormat cleanFmt(Eigen::StreamPrecision, 0, " ", "", "",
+                                      "", "[", "]");
 
 ArrayXi arange(const int start, int stop, const int step);
 } // namespace Utils

@@ -5,6 +5,7 @@
 using Noddy::Filter::Coeffs;
 using Noddy::Filter::Complex;
 using Noddy::Filter::ZPK;
+using Noddy::Utils::cleanFmt;
 
 bool operator==(const Coeffs& first, const Coeffs& second) {
   if (first.a != second.a)
@@ -16,8 +17,8 @@ bool operator==(const Coeffs& first, const Coeffs& second) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Coeffs& coeffs) {
-  os << "b: " << coeffs.b.format(g_cleanFmt) << "\n";
-  os << "a: " << coeffs.a.format(g_cleanFmt) << "\n";
+  os << "b: " << coeffs.b.format(cleanFmt) << "\n";
+  os << "a: " << coeffs.a.format(cleanFmt) << "\n";
   return os;
 }
 

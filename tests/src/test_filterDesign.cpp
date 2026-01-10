@@ -5,6 +5,7 @@
 
 using Noddy::Filter::Complex;
 using Noddy::Filter::ZPK;
+using Noddy::Utils::cleanFmt;
 
 class Timer {
   using Second = std::chrono::duration<double, std::ratio<1>>;
@@ -23,8 +24,8 @@ private:
 
 std::ostream& operator<<(std::ostream& os, const ZPK& zpk) {
   os << "k: " << zpk.k << "\n";
-  os << "z: " << zpk.z.format(g_cleanFmt) << "\n";
-  os << "p: " << zpk.p.format(g_cleanFmt) << "\n";
+  os << "z: " << zpk.z.format(cleanFmt) << "\n";
+  os << "p: " << zpk.p.format(cleanFmt) << "\n";
   return os;
 }
 
