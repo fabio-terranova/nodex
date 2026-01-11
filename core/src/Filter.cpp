@@ -5,6 +5,40 @@
 namespace Noddy {
 namespace Filter {
 using Utils::arange;
+using Utils::cleanFmt;
+
+std::ostream& operator<<(std::ostream& os, const Coeffs& coeffs) {
+  os << "b: " << coeffs.b.format(cleanFmt) << "\n";
+  os << "a: " << coeffs.a.format(cleanFmt) << "\n";
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const ZPK& zpk) {
+  os << "k: " << zpk.k << "\n";
+  os << "z: " << zpk.z.format(cleanFmt) << "\n";
+  os << "p: " << zpk.p.format(cleanFmt) << "\n";
+  return os;
+}
+
+ZPK analog2digital(ZPK analog, double fc, double fs,
+                   Type type = Type::lowpass) {
+  assert(type == Type::lowpass or
+         type == Type::highpass and
+             "iirFilter(): only lowPass and highPass are "
+             "implemented for single cutoff frequency");
+
+  fc /= (fs / 2);
+  fs = 2.0;
+  const double warped{2.0 * fs * std::tan(std::numbers::pi * fc / fs)};
+
+  if (type == Type::lowpass)
+    analog = lp2lp(analog, warped);
+  else if (type == Type::highpass) {
+    analog = lp2hp(analog, warped);
+  }
+
+  return bilinearTransform(analog, fs);
+}
 
 ZPK cheb1ap(const int n, const double rp) {
   if (n == 0)
@@ -154,7 +188,39 @@ VectorXcd roots2poly(const VectorXcd& roots) {
 }
 
 Coeffs zpk2tf(const ZPK& zpk) {
-  return {zpk.k * roots2poly(zpk.z), roots2poly(zpk.p)};
+  return {(zpk.k * roots2poly(zpk.z)).real(), roots2poly(zpk.p).real()};
+}
+
+ArrayXd linearFilter(const Coeffs& coeffs, const VectorXd& x, VectorXd& si) {
+  auto bNum{coeffs.b.size()};
+  auto aNum{coeffs.a.size()};
+  auto xNum{x.size()};
+  auto zNum{std::max(bNum, aNum) - 1};
+
+  // normalize filter coeffs
+  double a0{coeffs.a(0)};
+  auto   b = coeffs.b / a0;
+  auto   a = coeffs.a / a0;
+
+  if (si.size() < zNum)
+    si.conservativeResizeLike(Eigen::VectorXd::Zero(zNum));
+
+  VectorXd y{xNum}; // output
+
+  for (int k{0}; k < xNum; ++k) {
+    const double xk = x(k);
+
+    y(k) = si(0) + b(0) * xk;
+
+    if (zNum > 1) {
+      si.head(zNum - 1) = si.tail(zNum - 1) + b.segment(1, zNum - 1) * xk -
+                          a.segment(1, zNum - 1) * y(k);
+    }
+
+    si(zNum - 1) = b(bNum - 1) * xk - a(aNum - 1) * y(k);
+  }
+
+  return y;
 }
 } // namespace Filter
 } // namespace Noddy

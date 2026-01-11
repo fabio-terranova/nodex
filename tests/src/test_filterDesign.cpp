@@ -4,15 +4,7 @@
 
 using Noddy::Filter::Complex;
 using Noddy::Filter::ZPK;
-using Noddy::Utils::cleanFmt;
 using Noddy::Utils::Timer;
-
-std::ostream& operator<<(std::ostream& os, const ZPK& zpk) {
-  os << "k: " << zpk.k << "\n";
-  os << "z: " << zpk.z.format(cleanFmt) << "\n";
-  os << "p: " << zpk.p.format(cleanFmt) << "\n";
-  return os;
-}
 
 bool test_filterDesign() {
   using namespace Noddy::Filter;

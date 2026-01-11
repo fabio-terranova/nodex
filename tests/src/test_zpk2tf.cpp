@@ -1,11 +1,9 @@
 #include "Filter.h"
-#include "Utils.h"
 #include <iostream>
 
 using Noddy::Filter::Coeffs;
 using Noddy::Filter::Complex;
 using Noddy::Filter::ZPK;
-using Noddy::Utils::cleanFmt;
 
 bool operator==(const Coeffs& first, const Coeffs& second) {
   if (first.a != second.a)
@@ -16,12 +14,6 @@ bool operator==(const Coeffs& first, const Coeffs& second) {
   return true;
 }
 
-std::ostream& operator<<(std::ostream& os, const Coeffs& coeffs) {
-  os << "b: " << coeffs.b.format(cleanFmt) << "\n";
-  os << "a: " << coeffs.a.format(cleanFmt) << "\n";
-  return os;
-}
-
 bool test_zpk2tf() {
   using namespace Noddy::Filter;
 
@@ -30,7 +22,7 @@ bool test_zpk2tf() {
   filter.z << 2, 6;
   filter.p << 1, 8;
 
-  Coeffs expected{VectorXcd{3}, VectorXcd{3}};
+  Coeffs expected{VectorXd{3}, VectorXd{3}};
   expected.b << 5.0, -40.0, 60.0;
   expected.a << 1.0, -9.0, 8.0;
 
