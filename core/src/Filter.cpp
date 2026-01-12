@@ -1,6 +1,9 @@
 #include "Filter.h"
 #include "Utils.h"
 #include <Eigen/Dense>
+#include <algorithm>
+#include <iostream>
+#include <unsupported/Eigen/FFT>
 
 namespace Noddy {
 namespace Filter {
@@ -200,36 +203,122 @@ Coeffs zpk2tf(const ZPK& zpk) {
   return {(zpk.k * roots2poly(zpk.z)).real(), roots2poly(zpk.p).real()};
 }
 
-ArrayXd linearFilter(const Coeffs& coeffs, const VectorXd& x, VectorXd& si) {
-  auto bNum{coeffs.b.size()};
-  auto aNum{coeffs.a.size()};
-  auto xNum{x.size()};
-  auto zNum{std::max(bNum, aNum) - 1};
+ArrayXd linearFilter(const Coeffs& filter, const VectorXd& x, VectorXd& si) {
+  auto nB{filter.b.size()};
+  auto nA{filter.a.size()};
+  auto nX{x.size()};
+  auto nS{std::max(nB, nA) - 1};
 
   // normalize filter coeffs
-  double a0{coeffs.a(0)};
-  auto   b = coeffs.b / a0;
-  auto   a = coeffs.a / a0;
+  double a0{filter.a(0)};
+  auto   b = filter.b / a0;
+  auto   a = filter.a / a0;
 
-  if (si.size() < zNum)
-    si.conservativeResizeLike(Eigen::VectorXd::Zero(zNum));
+  if (si.size() < nS)
+    si.conservativeResizeLike(Eigen::VectorXd::Zero(nS));
 
-  VectorXd y{xNum}; // output
+  VectorXd y{nX}; // output
 
-  for (int k{0}; k < xNum; ++k) {
+  for (int k{0}; k < nX; ++k) {
     const double xk = x(k);
 
     y(k) = si(0) + b(0) * xk;
 
-    if (zNum > 1) {
-      si.head(zNum - 1) = si.tail(zNum - 1) + b.segment(1, zNum - 1) * xk -
-                          a.segment(1, zNum - 1) * y(k);
+    if (nS > 1) {
+      si.head(nS - 1) = si.tail(nS - 1) + b.segment(1, nS - 1) * xk -
+                        a.segment(1, nS - 1) * y(k);
     }
 
-    si(zNum - 1) = b(bNum - 1) * xk - a(aNum - 1) * y(k);
+    si(nS - 1) = b(nB - 1) * xk - a(nA - 1) * y(k);
   }
 
   return y;
+}
+
+ArrayXd linearFilter(const Coeffs& filter, const VectorXd& x) {
+  auto     nS{std::max(filter.b.size(), filter.a.size()) - 1};
+  VectorXd si{VectorXd::Zero(nS)};
+
+  return linearFilter(filter, x, si);
+}
+
+ArrayXd findEffectiveIR(const Coeffs& filter, const double epsilon,
+                        const int maxLength) {
+  auto     nS{std::max(filter.b.size(), filter.a.size()) - 1};
+  VectorXd si{VectorXd::Zero(nS)};
+
+  VectorXd impulse{Eigen::VectorXd::Zero(1)};
+  impulse(0) = 1;
+  auto firstSample{linearFilter(filter, impulse, si)};
+
+  VectorXd ir{VectorXd::Zero(maxLength)};
+  ir(0) = firstSample(0);
+
+  VectorXd zero{Eigen::VectorXd::Zero(1)};
+  int      length{1};
+  while (length < maxLength) {
+    auto y{linearFilter(filter, zero, si)};
+    ir(length) = y(0);
+    ++length;
+
+    if (std::abs(y(0)) < epsilon) {
+      // check a few more samples to ensure it isn't just zero-crossing
+      bool trulyDead{true};
+
+      // TODO: find good number (10 for now)... User defined?
+      for (int i{0}; i < 10; ++i) {
+        auto after{std::abs(linearFilter(filter, zero, si)(0))};
+        if (after > epsilon) {
+          trulyDead = false;
+          break;
+        }
+      }
+
+      if (trulyDead)
+        return ir.head(length);
+    }
+  }
+
+  return ir;
+}
+
+VectorXd fastConvolve(const VectorXd& f, const VectorXd& g) {
+  Eigen::FFT<double> fft;
+
+  auto L = f.size();
+  auto M = g.size();
+  auto N = L + M - 1;
+
+  // Find the next power of 2 for FFT efficiency
+  int N_fft = 1;
+  while (N_fft < N)
+    N_fft <<= 1;
+
+  // Zero-pad both signals to N_fft
+  VectorXd f_padded = VectorXd::Zero(N_fft);
+  VectorXd g_padded = VectorXd::Zero(N_fft);
+  f_padded.head(L)  = f;
+  g_padded.head(M)  = g;
+
+  VectorXcd fF, fG;
+  fft.fwd(fF, f_padded);
+  fft.fwd(fG, g_padded);
+
+  VectorXcd fFG = fF.array() * fG.array();
+
+  VectorXd result;
+  fft.inv(result, fFG);
+
+  return result.head(N);
+}
+
+ArrayXd firFilter(const Coeffs& filter, const VectorXd& x, const double epsilon,
+                  const int maxLength) {
+  const auto filterIR{findEffectiveIR(filter, epsilon, maxLength)};
+
+  VectorXd y{fastConvolve(filterIR, x)};
+
+  return y.head(x.size()).array();
 }
 } // namespace Filter
 } // namespace Noddy

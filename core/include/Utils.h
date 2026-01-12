@@ -8,8 +8,10 @@ namespace Noddy {
 namespace Utils {
 using Eigen::ArrayXi;
 
-inline const Eigen::IOFormat cleanFmt(Eigen::StreamPrecision, 0, " ", "", "",
+inline const Eigen::IOFormat cleanFmt(Eigen::StreamPrecision, 0, " ", ",", "",
                                       "", "[", "]");
+
+Eigen::VectorXd readVectorFromFile(const std::string& filename);
 
 class Timer {
   using Second = std::chrono::duration<double, std::ratio<1>>;

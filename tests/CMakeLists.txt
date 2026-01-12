@@ -1,6 +1,7 @@
 set(TEST_NAMES
     test_zpk2tf
     test_filterDesign
+    test_lfilter
 )
 
 # Executables

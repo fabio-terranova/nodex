@@ -69,7 +69,12 @@ ZPK iirFilter(const int n, double fc, double fs, const double param) {
 
 Coeffs zpk2tf(const ZPK& zpk);
 
-ArrayXd linearFilter(const Coeffs& coeffs, const VectorXd& x, VectorXd& si);
+ArrayXd linearFilter(const Coeffs& filter, const VectorXd& x, VectorXd& si);
+ArrayXd linearFilter(const Coeffs& filter, const VectorXd& x);
+ArrayXd findEffectiveIR(const Coeffs& filter, const double epsilon = 1e-12,
+                        const int maxLength = 10000);
+ArrayXd firFilter(const Coeffs& filter, const VectorXd& x,
+                  const double epsilon = 1e-12, const int maxLength = 10000);
 } // namespace Filter
 } // namespace Noddy
 

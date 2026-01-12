@@ -8,7 +8,8 @@ build
 .vscode
 
 # Python test scripts
-test.py
+*.py
+data.txt
 
 # Prerequisites
 *.d
