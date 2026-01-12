@@ -12,7 +12,7 @@ bool test_lfilter() {
   const auto   ftype{lowpass};
 
   // TODO: provide file
-  ArrayXd data{Noddy::Utils::readVectorFromFile("../data.txt")};
+  ArrayXd data{Noddy::Utils::readVectorFromFile("data.txt")};
 
   Noddy::Utils::Timer timer;
 
@@ -23,7 +23,7 @@ bool test_lfilter() {
 
   timer.reset();
   // auto output{linearFilter(coeffs, data)};
-  auto output{firFilter(coeffs, data, 1e-12)};
+  auto output{fftFilter(coeffs, data, 1e-12)};
   auto elapsed{timer.elapsed()};
 
   std::cout << "Elapsed time: " << elapsed << '\n';

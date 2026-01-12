@@ -1,5 +1,5 @@
 # Library target
-add_library(noddy_core STATIC
+add_library(noddy_core SHARED
   ./src/Utils.cpp
   ./src/Filter.cpp
   ./src/Core.cpp

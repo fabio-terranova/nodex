@@ -312,7 +312,7 @@ VectorXd fastConvolve(const VectorXd& f, const VectorXd& g) {
   return result.head(N);
 }
 
-ArrayXd firFilter(const Coeffs& filter, const VectorXd& x, const double epsilon,
+ArrayXd fftFilter(const Coeffs& filter, const VectorXd& x, const double epsilon,
                   const int maxLength) {
   const auto filterIR{findEffectiveIR(filter, epsilon, maxLength)};
 

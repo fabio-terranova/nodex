@@ -14,5 +14,5 @@ endforeach()
 set(PYBIND11_FINDPYTHON ON)
 find_package(pybind11 CONFIG REQUIRED)
 
-pybind11_add_module(pytest ./src/test_py.cpp)
-install(TARGETS pytest DESTINATION .)
+pybind11_add_module(noddy_bind ./src/test_pybind11.cpp)
+target_link_libraries(noddy_bind PRIVATE noddy_core)

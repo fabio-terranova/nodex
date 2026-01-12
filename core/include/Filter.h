@@ -73,7 +73,7 @@ ArrayXd linearFilter(const Coeffs& filter, const VectorXd& x, VectorXd& si);
 ArrayXd linearFilter(const Coeffs& filter, const VectorXd& x);
 ArrayXd findEffectiveIR(const Coeffs& filter, const double epsilon = 1e-12,
                         const int maxLength = 10000);
-ArrayXd firFilter(const Coeffs& filter, const VectorXd& x,
+ArrayXd fftFilter(const Coeffs& filter, const VectorXd& x,
                   const double epsilon = 1e-12, const int maxLength = 10000);
 } // namespace Filter
 } // namespace Noddy
