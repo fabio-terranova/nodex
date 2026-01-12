@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.16...3.28)
 
 project(noddy LANGUAGES CXX C)
 
+include(CTest)
+
 find_package(OpenGL REQUIRED)
 
 set(CMAKE_CXX_STANDARD 20)

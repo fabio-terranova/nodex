@@ -1,5 +1,6 @@
 #define GLFW_INCLUDE_NONE
 
+#include "Core.h"
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
 #include <iostream>
@@ -29,6 +30,8 @@ void main() {
 )"};
 
 int main(void) {
+  std::cout << "Noddy::Core v" << Noddy::Core::version() << "\n";
+
   if (!glfwInit())
     return -1;
 
