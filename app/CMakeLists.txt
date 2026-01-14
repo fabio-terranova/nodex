@@ -13,6 +13,7 @@ add_executable(noddy_gui
     ${CMAKE_SOURCE_DIR}/external/imgui/backends/imgui_impl_glfw.cpp
     ${CMAKE_SOURCE_DIR}/external/implot/implot.cpp
     ${CMAKE_SOURCE_DIR}/external/implot/implot_items.cpp
+    ${CMAKE_SOURCE_DIR}/external/ImNodeFlow/src/ImNodeFlow.cpp
 )
 
 target_include_directories(noddy_gui
@@ -20,6 +21,7 @@ target_include_directories(noddy_gui
    PRIVATE ${CMAKE_SOURCE_DIR}/external/imgui
    PRIVATE ${CMAKE_SOURCE_DIR}/external/imgui/backends
    PRIVATE ${CMAKE_SOURCE_DIR}/external/implot
+   PRIVATE ${CMAKE_SOURCE_DIR}/external/ImNodeFlow/include
 )
 
 target_link_libraries(noddy_gui PRIVATE
@@ -27,3 +29,5 @@ target_link_libraries(noddy_gui PRIVATE
     glfw
     OpenGL::GL
 )
+
+target_compile_definitions(noddy_gui PRIVATE IMGUI_DEFINE_MATH_OPERATORS)
