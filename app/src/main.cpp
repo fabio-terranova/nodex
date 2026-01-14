@@ -1,17 +1,15 @@
+#define GLFW_INCLUDE_NONE
+
+#include "Core.h"
 #include "Filter.h"
-#include "Utils.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "implot.h"
-#include <string>
-
-#define GLFW_INCLUDE_NONE
-
-#include "Core.h"
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
 #include <iostream>
+#include <string>
 
 void framebuffer_size_callback(GLFWwindow*, int, int);
 void processInput(GLFWwindow*);
