@@ -2,6 +2,7 @@
 
 #include "Core.h"
 #include "Filter.h"
+#include "ImNodeFlow.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -10,6 +11,93 @@
 #include <glad/glad.h>
 #include <iostream>
 #include <string>
+
+class DataNode : public ImFlow::BaseNode {
+public:
+  DataNode() {
+    setTitle("Data");
+    setStyle(ImFlow::NodeStyle::green());
+    ImFlow::BaseNode::addIN<Eigen::VectorXd>(
+        "in", Eigen::VectorXd{}, ImFlow::ConnectionFilter::SameType());
+    ImFlow::BaseNode::addOUT<Eigen::VectorXd>("out", nullptr)
+        ->behaviour([this]() { return data_; });
+  }
+
+  void draw() override {
+    ImGui::SetNextItemWidth(100.f);
+    if (ImPlot::BeginPlot("", ImVec2(250, 150))) {
+      ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations,
+                        ImPlotAxisFlags_NoDecorations);
+      if (isSource_)
+        ImPlot::PlotLine("", data_.data(), static_cast<int>(data_.size()));
+      else
+        ImPlot::PlotLine(
+            "", getInVal<Eigen::VectorXd>("in").data(),
+            static_cast<int>(getInVal<Eigen::VectorXd>("in").size()));
+
+      ImPlot::EndPlot();
+    }
+  }
+
+  void setData(const Eigen::VectorXd& data) {
+    isSource_ = true;
+    data_     = data;
+  };
+
+private:
+  bool            isSource_{false};
+  Eigen::VectorXd data_{};
+};
+
+class ButterNode : public ImFlow::BaseNode {
+public:
+  ButterNode() {
+    setTitle("Lowpass");
+    setStyle(ImFlow::NodeStyle::brown());
+    ImFlow::BaseNode::addIN<Eigen::VectorXd>(
+        "in", Eigen::VectorXd{}, ImFlow::ConnectionFilter::SameType());
+    ImFlow::BaseNode::addOUT<Eigen::VectorXd>("out", nullptr)
+        ->behaviour([this]() {
+          int    filterOrder{4};
+          double fs{1000.0};
+          double fc{25.0};
+
+          auto filter{Noddy::Filter::zpk2tf(
+              Noddy::Filter::iirFilter<Noddy::Filter::buttap,
+                                       Noddy::Filter::lowpass>(filterOrder, fc,
+                                                               fs))};
+          return Noddy::Filter::linearFilter(filter,
+                                             getInVal<Eigen::VectorXd>("in"));
+        });
+  }
+
+  void draw() override { ImGui::SetNextItemWidth(100.f); }
+
+private:
+};
+
+/* Node editor that sets up the grid to place nodes */
+struct NodeEditor : ImFlow::BaseNode {
+  ImFlow::ImNodeFlow mINF;
+
+  NodeEditor(float d, std::size_t r) : BaseNode() {
+    mINF.setSize({d, d});
+    if (r > 0) {
+      auto n1 = mINF.addNode<DataNode>({50, 50});
+      auto nf = mINF.addNode<ButterNode>({550, 100});
+      auto n2 = mINF.addNode<DataNode>({750, 50});
+
+      n1.get()->setData(Eigen::VectorXd::Random(1000));
+
+      n1->outPin("out")->createLink(nf->inPin("in"));
+      nf->outPin("out")->createLink(n2->inPin("in"));
+    }
+  }
+
+  void set_size(ImVec2 d) { mINF.setSize(d); }
+
+  void draw() override { mINF.update(); }
+};
 
 void framebuffer_size_callback(GLFWwindow*, int, int);
 void processInput(GLFWwindow*);
@@ -180,7 +268,12 @@ int main(void) {
     fData.push_back(
         Noddy::Filter::linearFilter(Noddy::Filter::zpk2tf(digitalFilter), y));
   }
+  //
+  // Create a node editor with width and height
+  NodeEditor* nodeEditor     = new (NodeEditor)(1400, 500);
+  const auto  nodeEditorSize = ImVec2(1400, 600);
 
+  // Main loop
   while (!glfwWindowShouldClose(window)) {
     processInput(window);
 
@@ -203,7 +296,8 @@ int main(void) {
 
       if (ImPlot::BeginPlot("")) {
         ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations,
-                          ImPlotAxisFlags_NoDecorations);
+                          ImPlotAxisFlags_NoDecorations |
+                              ImPlotAxisFlags_AutoFit);
         ImPlot::PlotLine("Raw", y_, y_size);
 
         for (int i{}; i < 4; ++i) {
@@ -213,6 +307,12 @@ int main(void) {
         }
         ImPlot::EndPlot();
       }
+
+      ImGui::Begin("Node Editor", nullptr,
+                   ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse);
+      nodeEditor->set_size(nodeEditorSize);
+      nodeEditor->draw();
+      ImGui::End();
 
       // ImGui::ShowStackToolWindow();
 
