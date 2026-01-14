@@ -1,3 +1,3 @@
 # Noddy
 
-<img width="1882" height="474" alt="image" src="https://github.com/user-attachments/assets/d8ee79e7-dfaf-4574-9eef-e47cd8fda497" />
+<img width="1934" height="482" alt="image" src="https://github.com/user-attachments/assets/7c42ef72-ff72-4803-84f8-805c2b6efcbf" />
