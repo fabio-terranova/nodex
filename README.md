@@ -13,16 +13,6 @@ cmake ..
 cmake --build .
 ```
 
-## Dependencies
-
-All dependencies are included as submodules in the `external/` directory:
-
-- **ImGui** - Immediate mode GUI library
-- **ImPlot** - Plotting extension for ImGui
-- **GLFW** - Window and input handling
-- **Eigen** - Linear algebra library
-- **glad** - OpenGL loader
-
 ## Project Structure
 
 ```
