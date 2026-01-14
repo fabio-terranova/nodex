@@ -1,6 +1,10 @@
+#include "Filter.h"
+#include "Utils.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "implot.h"
+#include <string>
 
 #define GLFW_INCLUDE_NONE
 
@@ -146,6 +150,8 @@ int main(void) {
 
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
+  ImPlot::CreateContext();
+
   ImGuiIO& io{ImGui::GetIO()};
   (void)io;
   ImGui::StyleColorsDark();
@@ -153,10 +159,29 @@ int main(void) {
   // Setup scaling
   ImGuiStyle& style{ImGui::GetStyle()};
   style.ScaleAllSizes(mainScale);
-  style.FontScaleDpi = mainScale;
+  style.FontScaleDpi     = mainScale;
+  style.AntiAliasedLines = true;
 
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init("#version 330 core");
+
+  // Sample data
+  Eigen::VectorXd y{Eigen::VectorXd::Random(1000)};
+  auto            y_     = y.data();
+  int             y_size = y.size();
+
+  int    filterOrder{4};
+  double fs{1000.0};
+  double fc{100.0};
+
+  std::vector<Eigen::VectorXd> fData{};
+  for (int i{0}; i < 4; ++i) {
+    Noddy::Filter::ZPK digitalFilter{
+        Noddy::Filter::iirFilter<Noddy::Filter::buttap, Noddy::Filter::lowpass>(
+            filterOrder, fc - 25 * i, fs)};
+    fData.push_back(
+        Noddy::Filter::linearFilter(Noddy::Filter::zpk2tf(digitalFilter), y));
+  }
 
   while (!glfwWindowShouldClose(window)) {
     processInput(window);
@@ -176,10 +201,26 @@ int main(void) {
     // Sample window showing current FPS
     {
       ImGui::Begin("Simple window");
-
       ImGui::Text("FPS: %0.3f", ImGui::GetIO().Framerate);
-      if (ImGui::Button("Click me!"))
-        std::cout << "Button clicked!" << std::endl;
+
+      for (int i{}; i < 4; ++i) {
+        ImGui::PushID(i);
+        if (ImPlot::BeginPlot("")) {
+          ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations,
+                            ImPlotAxisFlags_NoDecorations);
+          ImGui::PushID(i);
+          ImPlot::PlotLine("Data", y_, y_size);
+          ImGui::PopID();
+
+          std::string fString{"Filtered (fc = " + std::to_string(100 - 25 * i) +
+                              " Hz)"};
+          ImPlot::PlotLine(fString.c_str(), fData[i].data(), fData[i].size());
+          ImPlot::EndPlot();
+        }
+        ImGui::PopID();
+      }
+
+      // ImGui::ShowStackToolWindow();
 
       ImGui::End();
     }
