@@ -1,6 +1,6 @@
 # Noddy
 
-<img width="1456" height="1104" alt="Noddy screenshot" src="https://github.com/user-attachments/assets/907c6cef-5c01-466a-99d1-aea24ddede47" />
+<img width="1456" height="1106" alt="image" src="https://github.com/user-attachments/assets/07318123-1aa5-4865-864a-35a69270b7f7" />
 
 ## Building
 
