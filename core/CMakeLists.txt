@@ -10,3 +10,6 @@ target_include_directories(noddy_core PUBLIC include)
 target_link_libraries(noddy_core PUBLIC
     eigen
 )
+
+# Enable import library generation on Windows
+set_target_properties(noddy_core PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
