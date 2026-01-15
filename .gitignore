@@ -10,9 +10,6 @@ build
 # imgui ini file
 imgui.ini
 
-# Python test scripts
-*.py
-
 # Prerequisites
 *.d
 

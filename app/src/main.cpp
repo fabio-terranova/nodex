@@ -11,7 +11,6 @@
 #include <iostream>
 #include <string>
 
-
 using Noddy::Filter::Signal;
 
 class DataNode : public ImFlow::BaseNode {
@@ -19,10 +18,13 @@ public:
   DataNode() {
     setTitle("Data");
     setStyle(ImFlow::NodeStyle::green());
-    ImFlow::BaseNode::addIN<Signal>("in", Signal{},
+    ImFlow::BaseNode::addIN<Signal>(">", Signal{},
                                     ImFlow::ConnectionFilter::SameType());
-    ImFlow::BaseNode::addOUT<Signal>("out", nullptr)->behaviour([this]() {
-      return data_;
+    ImFlow::BaseNode::addOUT<Signal>(">", nullptr)->behaviour([this]() {
+      if (isSource_)
+        return data_;
+      else
+        return getInVal<Signal>(">");
     });
   }
 
@@ -34,8 +36,8 @@ public:
       if (isSource_)
         ImPlot::PlotLine("", data_.data(), static_cast<int>(data_.size()));
       else
-        ImPlot::PlotLine("", getInVal<Signal>("in").data(),
-                         static_cast<int>(getInVal<Signal>("in").size()));
+        ImPlot::PlotLine("", getInVal<Signal>(">").data(),
+                         static_cast<int>(getInVal<Signal>(">").size()));
 
       ImPlot::EndPlot();
     }
@@ -54,26 +56,31 @@ private:
 class FilterNode : public ImFlow::BaseNode {
 public:
   FilterNode() {
-    setTitle("Lowpass");
+    setTitle("LPF");
     setStyle(ImFlow::NodeStyle::brown());
-    ImFlow::BaseNode::addIN<Signal>("in", Signal(),
+    ImFlow::BaseNode::addIN<Signal>(">", Signal(),
                                     ImFlow::ConnectionFilter::SameType());
-    ImFlow::BaseNode::addOUT<Signal>("out", nullptr)->behaviour([this]() {
+    ImFlow::BaseNode::addOUT<Signal>(">", nullptr)->behaviour([this]() {
       int    filterOrder{2};
       double fs{1000.0};
-      double fc{50.0};
 
       auto filter{Noddy::Filter::zpk2tf(
           Noddy::Filter::iirFilter<Noddy::Filter::buttap,
-                                   Noddy::Filter::lowpass>(filterOrder, fc,
+                                   Noddy::Filter::lowpass>(filterOrder, m_fc,
                                                            fs))};
-      return Noddy::Filter::linearFilter(filter, getInVal<Signal>("in"));
+      return Noddy::Filter::linearFilter(filter, getInVal<Signal>(">"));
     });
   }
 
-  void draw() override { ImGui::SetNextItemWidth(100.f); }
+  void draw() override {
+    ImGui::SetNextItemWidth(100.f);
+    ImGui::Text("fc (Hz): %0.2f", m_fc);
+  }
+
+  void setFrequency(double fc) { m_fc = fc; }
 
 private:
+  double m_fc{100};
 };
 
 /* Node editor that sets up the grid to place nodes */
@@ -83,22 +90,29 @@ struct NodeEditor : ImFlow::BaseNode {
   NodeEditor() : BaseNode() {
     mINF.getGrid().config().zoom_enabled = false;
 
-    auto n1 = mINF.addNode<DataNode>({50, 50});
-    auto nf = mINF.addNode<FilterNode>({550, 100});
+    auto n1  = mINF.addNode<DataNode>({50, 50});
+    auto nf1 = mINF.addNode<FilterNode>({550, 100});
+    nf1->setFrequency(50.0);
+    auto nf2 = mINF.addNode<FilterNode>({550, 200});
+    nf2->setFrequency(150.0);
     auto n2 = mINF.addNode<DataNode>({750, 50});
+    auto n3 = mINF.addNode<DataNode>({750, 300});
 
     // Sample data
     Signal y(1000);
     // Gaussian noise between -1.0 and 1.0
     std::generate(y.begin(), y.end(), []() {
-      return 2.0 * (static_cast<double>(std::rand()) /
-                    static_cast<double>(RAND_MAX) - 0.5);
+      return 2.0 *
+             (static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX) -
+              0.5);
     });
 
     n1.get()->setData(y);
 
-    n1->outPin("out")->createLink(nf->inPin("in"));
-    nf->outPin("out")->createLink(n2->inPin("in"));
+    n1->outPin(">")->createLink(nf1->inPin(">"));
+    n1->outPin(">")->createLink(nf2->inPin(">"));
+    nf1->outPin(">")->createLink(n2->inPin(">"));
+    nf2->outPin(">")->createLink(n3->inPin(">"));
   }
 
   void set_size(ImVec2 d) { mINF.setSize(d); }
@@ -143,8 +157,8 @@ int main(void) {
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
 
-  float mainScale =
-      ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor());
+  float mainScale{
+      ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor())};
   GLFWwindow* window{
       glfwCreateWindow(kWinWidth, kWinHeight, "Noddy GUI", nullptr, nullptr)};
   if (!window) {
@@ -262,21 +276,22 @@ int main(void) {
   Signal y(1000);
   // Gaussian noise between -0.5 and 0.5
   std::generate(y.begin(), y.end(), []() {
-    return 2.0 * (static_cast<double>(std::rand()) /
-                  static_cast<double>(RAND_MAX) -
-                  0.5);
+    return 2.0 *
+           (static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX) -
+            0.5);
   });
 
   int    filterOrder{2};
   double fs{1000.0};
-  double fc{100.0};
+  double fc{100.0}; // starting cutoff freq
 
   std::vector<Signal> yf(4);
-  for (int i{0}; i < 4; ++i) {
+  for (std::size_t i{0}; i < 4; ++i) {
     Noddy::Filter::ZPK digitalFilter{
         Noddy::Filter::iirFilter<Noddy::Filter::buttap, Noddy::Filter::lowpass>(
             filterOrder, fc - 25 * i, fs)};
-    auto filtered{Noddy::Filter::linearFilter(Noddy::Filter::zpk2tf(digitalFilter), y)};
+    auto filtered{
+        Noddy::Filter::linearFilter(Noddy::Filter::zpk2tf(digitalFilter), y)};
     yf[i] = filtered;
   }
   //
@@ -309,12 +324,14 @@ int main(void) {
         ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations,
                           ImPlotAxisFlags_NoDecorations |
                               ImPlotAxisFlags_AutoFit);
-        ImPlot::PlotLine("Raw", y.data(), y.size());
+        ImPlot::PlotLine("Raw", y.data(), static_cast<int>(y.size()));
 
         for (int i{}; i < 4; ++i) {
           std::string fString{"Filtered (fc = " + std::to_string(100 - 25 * i) +
                               " Hz)"};
-          ImPlot::PlotLine(fString.c_str(), yf[i].data(), yf[i].size());
+          ImPlot::PlotLine(
+              fString.c_str(), yf[static_cast<std::size_t>(i)].data(),
+              static_cast<int>(yf[static_cast<std::size_t>(i)].size()));
         }
         ImPlot::EndPlot();
       }
