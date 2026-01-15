@@ -4,10 +4,10 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(noddy_bind, m, py::mod_gil_not_used()) {
+PYBIND11_MODULE(noddy_py, m, py::mod_gil_not_used()) {
   using namespace Noddy::Filter;
 
-  m.doc() = "pybind11 bindings";
+  m.doc() = "Python bindings for Noddy filter operations.";
 
   m.def(
       "fft_filter",
@@ -23,11 +23,7 @@ PYBIND11_MODULE(noddy_bind, m, py::mod_gil_not_used()) {
   m.def(
       "lfilter",
       [](const Signal& b, const Signal& a, const Signal& x) {
-        Coeffs filter(b, a);
-
-        Signal output{Noddy::Filter::linearFilter(filter, x)};
-
-        return output;
+        return Noddy::Filter::linearFilter({b, a}, x);
       },
       py::arg("b"), py::arg("a"), py::arg("x"));
 }
