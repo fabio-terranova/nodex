@@ -20,7 +20,7 @@ public:
     setStyle(ImFlow::NodeStyle::green());
     ImFlow::BaseNode::addIN<Signal>(">", Signal{},
                                     ImFlow::ConnectionFilter::SameType());
-    ImFlow::BaseNode::addOUT<Signal>("<", nullptr)->behaviour([this]() {
+    ImFlow::BaseNode::addOUT<Signal>(">", nullptr)->behaviour([this]() {
       if (isSource_)
         return data_;
       else
@@ -60,7 +60,7 @@ public:
     setStyle(ImFlow::NodeStyle::brown());
     ImFlow::BaseNode::addIN<Signal>(">", Signal(),
                                     ImFlow::ConnectionFilter::SameType());
-    ImFlow::BaseNode::addOUT<Signal>("<", nullptr)->behaviour([this]() {
+    ImFlow::BaseNode::addOUT<Signal>(">", nullptr)->behaviour([this]() {
       int    filterOrder{2};
       double fs{1000.0};
 
@@ -109,10 +109,10 @@ struct NodeEditor : ImFlow::BaseNode {
 
     n1.get()->setData(y);
 
-    n1->outPin("<")->createLink(nf1->inPin(">"));
-    n1->outPin("<")->createLink(nf2->inPin(">"));
-    nf1->outPin("<")->createLink(n2->inPin(">"));
-    nf2->outPin("<")->createLink(n3->inPin(">"));
+    n1->outPin(">")->createLink(nf1->inPin(">"));
+    n1->outPin(">")->createLink(nf2->inPin(">"));
+    nf1->outPin(">")->createLink(n2->inPin(">"));
+    nf2->outPin(">")->createLink(n3->inPin(">"));
   }
 
   void set_size(ImVec2 d) { mINF.setSize(d); }
