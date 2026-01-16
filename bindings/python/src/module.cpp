@@ -1,6 +1,5 @@
 #include "Filter.h"
 #include "FilterEigen.h"
-#include <cstddef>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -14,7 +13,7 @@ lfilter_multi(py::array_t<double, py::array::c_style | py::array::forcecast> b,
               py::array_t<double, py::array::c_style | py::array::forcecast> x);
 
 PYBIND11_MODULE(noddy_py, m, py::mod_gil_not_used()) {
-  using namespace Noddy::Filter;
+  using Noddy::Filter::Signal;
 
   m.doc() = "Python bindings for Noddy filter operations.";
 
