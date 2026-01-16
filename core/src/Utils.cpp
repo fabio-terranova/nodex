@@ -30,7 +30,7 @@ Eigen::VectorXd readVectorFromFile(const std::string& filename) {
 
   Eigen::VectorXd vec(values.size());
   for (std::size_t i = 0; i < values.size(); ++i) {
-    vec(i) = values[i];
+    vec(static_cast<Eigen::Index>(i)) = values[i];
   }
 
   return vec;

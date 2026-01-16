@@ -1,4 +1,5 @@
 #include "Filter.h"
+#include "Eigen/Core"
 #include "Utils.h"
 #include <Eigen/Dense>
 #include <cassert>
@@ -310,16 +311,18 @@ Signal linearFilter(const Coeffs& filter, const Signal& x, Signal& si) {
   EigenMap<ArrayXd> y(yVec.data(), static_cast<Index>(nX));
 
   for (std::size_t k{0}; k < nX; ++k) {
+    Index        kd = static_cast<Index>(k);
     const double xk = x[k];
 
-    y(static_cast<Index>(k)) = state(0) + b(0) * xk;
+    y(kd) = state(0) + b(0) * xk;
 
     if (nS > 1) {
       state.head(nS - 1) = state.tail(nS - 1) + b.segment(1, nS - 1) * xk -
-                           a.segment(1, nS - 1) * y(static_cast<Index>(k));
+                           a.segment(1, nS - 1) * y(kd);
     }
 
-    state(nS - 1) = b(nB - 1) * xk - a(nA - 1) * y(k);
+    state(static_cast<Index>(nS) - 1) = b(static_cast<Index>(nB) - 1) * xk -
+                                        a(static_cast<Index>(nA) - 1) * y(kd);
   }
 
   return yVec;
