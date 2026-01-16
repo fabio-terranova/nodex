@@ -10,12 +10,12 @@ n_samples = 100000
 order = 2
 fc = 400
 fs = 10000
-epsilon = 1e-12
+epsilon = 1e-9
 ftype = "butter"
 # ftype = "cheby1"
 # ftype = "cheby2"
-# btype = "low"
-btype = "high"
+btype = "low"
+# btype = "high"
 
 b, a = signal.iirfilter(order, fc, fs=fs, btype=btype, ftype=ftype, rs=5.0, rp=5.0)
 

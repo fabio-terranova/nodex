@@ -1,4 +1,5 @@
 #include "Filter.h"
+#include <cstddef>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -11,8 +12,8 @@ PYBIND11_MODULE(noddy_py, m, py::mod_gil_not_used()) {
 
   m.def(
       "fft_filter",
-      [](const Signal& b, const Signal& a, const Signal& x, double epsilon,
-         int max_length) {
+      [](const Signal& b, const Signal& a, const Signal& x,
+         const double epsilon, const std::size_t max_length) {
         Signal output{Noddy::Filter::fftFilter({b, a}, x, epsilon, max_length)};
 
         return output;

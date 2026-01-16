@@ -2,6 +2,7 @@
 #define INCLUDE_CORE_FILTER_H_
 
 #include <complex>
+#include <cstddef>
 #include <numbers>
 #include <vector>
 
@@ -73,7 +74,8 @@ Signal findEffectiveIR(const Coeffs& filter, const double epsilon = 1e-12,
 // filter and gets the filtered signal by convolution (fast convolution by
 // multiplication in the frequency domain, thus "fft" in the name)
 Signal fftFilter(const Coeffs& filter, const Signal& x,
-                 const double epsilon = 1e-12, const int maxLength = 10000);
+                 const double      epsilon   = 1e-12,
+                 const std::size_t maxLength = 10000);
 } // namespace Filter
 } // namespace Noddy
 

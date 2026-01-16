@@ -4,7 +4,7 @@ WORK IN PROGRESS...
 
 Node-based DSP application written in C++.
 
-<img width="1472" height="1114" alt="image" src="https://github.com/user-attachments/assets/0015cb2e-313e-4d0c-9cc4-40ae3331ed31" />
+<img width="1436" height="1020" alt="image" src="https://github.com/user-attachments/assets/faf4414b-4269-4f29-a556-506c0539dcfd" />
 
 ## Building
 
