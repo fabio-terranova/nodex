@@ -18,12 +18,14 @@ ftype = "butter"
 btype = "low"
 # btype = "high"
 
+
 @contextmanager
 def timed(label: str):
     t0 = time.time()
     yield
     dt = time.time() - t0
     print(f"{label}:\t {dt} s")
+
 
 b, a = signal.iirfilter(order, fc, fs=fs, btype=btype, ftype=ftype, rs=5.0, rp=5.0)
 
@@ -55,42 +57,41 @@ fcpp_fft, Pxx_dencpp_fft = signal.welch(outputcpp_fft, fs)
 
 if plot:
     # share x axis
-    plt.subplot(2, 1, 1)
-    plt.plot(x, data, label="data")
-    plt.plot(x, output, label="filtered (py)")
-    plt.plot(x, outputcpp, label="filtered (cpp)")
-    plt.plot(x, outputcpp_fft, label="filtered (cpp, fft)")
-    plt.ylabel("Amplitude")
-    plt.legend()
+    _, (ax1, ax2) = plt.subplots(nrows=2, sharex=True)
+    ax1.plot(x, data, label="data")
+    ax1.plot(x, output, label="filtered (py)")
+    ax1.plot(x, outputcpp, label="filtered (cpp)")
+    ax1.plot(x, outputcpp_fft, label="filtered (cpp, fft)")
+    ax1.set_ylabel("Amplitude")
+    ax1.legend()
 
-    plt.subplot(2, 1, 2, sharex=plt.gca())
-    plt.plot(x, output - outputcpp, label="filtered (cpp)")
-    plt.ylabel("Amplitude")
-    plt.plot(x, output - outputcpp_fft, label="filtered (cpp, fft)")
-    plt.xlabel("Time (s)")
-    plt.ylabel("Error")
-    plt.legend()
+    ax2.plot(x, output - outputcpp, label="filtered (cpp)")
+    ax2.set_ylabel("Amplitude")
+    ax2.plot(x, output - outputcpp_fft, label="filtered (cpp, fft)")
+    ax2.set_xlabel("Time (s)")
+    ax2.set_ylabel("Error")
+    ax2.legend()
+
     plt.tight_layout()
     plt.show()
 
     # plot fft (magnitude and phase)
-    plt.subplot(2, 1, 1)
-    plt.plot(freqs, np.abs(fft_data), label="data")
-    plt.plot(freqs, np.abs(fft_output), label="filtered (py)")
-    plt.plot(freqs, np.abs(fft_outputcpp), label="filtered (cpp)")
-    plt.plot(freqs, np.abs(fft_outputcpp_fft), label="filtered (cpp, fft)")
-    plt.ylabel("Amplitude")
+    _, (ax1, ax2) = plt.subplots(nrows=2, sharex=True)
+    ax1.plot(freqs, np.abs(fft_data), label="data")
+    ax1.plot(freqs, np.abs(fft_output), label="filtered (py)")
+    ax1.plot(freqs, np.abs(fft_outputcpp), label="filtered (cpp)")
+    ax1.plot(freqs, np.abs(fft_outputcpp_fft), label="filtered (cpp, fft)")
+    ax1.set_ylabel("Amplitude")
+    ax1.legend()
+    ax2.plot(freqs, np.angle(fft_data), label="data")
+    ax2.plot(freqs, np.angle(fft_output), label="filtered (py)")
+    ax2.plot(freqs, np.angle(fft_outputcpp), label="filtered (cpp)")
+    ax2.plot(freqs, np.angle(fft_outputcpp_fft), label="filtered (cpp, fft)")
+    ax2.set_xlabel("Frequency (Hz)")
+    ax2.set_ylabel("Phase (radians)")
+    ax2.legend()
+
     plt.semilogx()
-    plt.legend()
-    plt.subplot(2, 1, 2, sharex=plt.gca())
-    plt.plot(freqs, np.angle(fft_data), label="data")
-    plt.plot(freqs, np.angle(fft_output), label="filtered (py)")
-    plt.plot(freqs, np.angle(fft_outputcpp), label="filtered (cpp)")
-    plt.plot(freqs, np.angle(fft_outputcpp_fft), label="filtered (cpp, fft)")
-    plt.xlabel("Frequency (Hz)")
-    plt.ylabel("Phase (radians)")
-    plt.semilogx()
-    plt.legend()
     plt.tight_layout()
     plt.show()
 
