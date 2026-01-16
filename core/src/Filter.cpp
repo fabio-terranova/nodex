@@ -336,7 +336,7 @@ Signal findEffectiveIR(const Coeffs& filter, const double epsilon,
   const std::size_t   nS{std::max(filter.b.size(), filter.a.size()) - 1};
   std::vector<double> si(nS, 0.0);
 
-  Signal     impulse(maxLength, 0.0);
+  Signal impulse(maxLength, 0.0);
   impulse[0] = 1.0;
   Signal ir{linearFilter(filter, impulse, si)};
 
