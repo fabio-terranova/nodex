@@ -16,6 +16,7 @@ using std::numbers::pi;
 using Noddy::Utils::Complex;
 using Noddy::Utils::Signal;
 
+// Filter transfer function coefficients representation
 struct Coeffs {
   std::vector<double> b{};
   std::vector<double> a{};
@@ -24,6 +25,7 @@ struct Coeffs {
 bool          operator==(const Coeffs& first, const Coeffs& second);
 std::ostream& operator<<(std::ostream& os, const Coeffs& coeffs);
 
+// Filter zeros-poles-gain representation
 struct ZPK {
   std::vector<Complex> z{};
   std::vector<Complex> p{};
@@ -31,37 +33,6 @@ struct ZPK {
 };
 
 std::ostream& operator<<(std::ostream& os, const ZPK& zpk);
-
-enum Type {
-  lowpass,
-  highpass,
-  bandpass,
-  bandstop,
-  maxFilters,
-};
-
-ZPK buttap(const int n);
-ZPK cheb1ap(const int n, const double rp);
-ZPK cheb2ap(const int n, const double rs);
-
-ZPK analog2digital(ZPK analog, double fc, double fs, Type type);
-
-ZPK bilinearTransform(const ZPK& analog, const double fs);
-
-ZPK lp2lp(const ZPK& input, const double wc);
-ZPK lp2hp(const ZPK& input, const double wc);
-
-template <ZPK (*F)(const int), Type type>
-ZPK iirFilter(const int n, double fc, double fs) {
-  return analog2digital(F(n), fc, fs, type);
-}
-
-template <ZPK (*F)(const int, const double), Type type>
-ZPK iirFilter(const int n, double fc, double fs, const double param) {
-  return analog2digital(F(n, param), fc, fs, type);
-}
-
-Coeffs zpk2tf(const ZPK& zpk);
 
 // Filtering functions (IIR compatible)
 Signal linearFilter(const Coeffs& filter, const Signal& x, Signal& si);
@@ -77,6 +48,40 @@ Signal findEffectiveIR(const Coeffs& filter, const double epsilon = 1e-12,
 Signal fftFilter(const Coeffs& filter, const Signal& x,
                  const double      epsilon   = 1e-12,
                  const std::size_t maxLength = 10000);
+
+// Zeros-poles-gain to transfer function coefficients conversion
+Coeffs zpk2tf(const ZPK& zpk);
+
+// Standard filter types
+enum Type {
+  lowpass,
+  highpass,
+  bandpass, // TODO: implement
+  bandstop, // TODO: implement
+  maxFilters,
+};
+
+// Transformations
+ZPK analog2digital(ZPK analog, double fc, double fs, Type type);
+ZPK bilinearTransform(const ZPK& analog, const double fs);
+ZPK lp2lp(const ZPK& input, const double wc);
+ZPK lp2hp(const ZPK& input, const double wc);
+
+// IIR filter design functions
+template <ZPK (*F)(const int), Type type>
+ZPK iirFilter(const int n, double fc, double fs) {
+  return analog2digital(F(n), fc, fs, type);
+}
+
+template <ZPK (*F)(const int, const double), Type type>
+ZPK iirFilter(const int n, double fc, double fs, const double param) {
+  return analog2digital(F(n, param), fc, fs, type);
+}
+
+// Analog prototype filters
+ZPK buttap(const int n);
+ZPK cheb1ap(const int n, const double rp);
+ZPK cheb2ap(const int n, const double rs);
 } // namespace Filter
 } // namespace Noddy
 
