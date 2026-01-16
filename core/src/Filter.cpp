@@ -336,38 +336,20 @@ Signal findEffectiveIR(const Coeffs& filter, const double epsilon,
   const std::size_t   nS{std::max(filter.b.size(), filter.a.size()) - 1};
   std::vector<double> si(nS, 0.0);
 
-  Signal     impulse(1, 1.0);
-  const auto firstSample{linearFilter(filter, impulse, si)};
+  Signal     impulse(maxLength, 0.0);
+  impulse[0] = 1.0;
+  Signal ir{linearFilter(filter, impulse, si)};
 
-  Signal ir;
-  ir.reserve(maxLength);
-  ir.push_back(firstSample[0]);
-
-  Signal zero(1, 0.0);
-
-  while (ir.size() < maxLength) {
-    const auto   y{linearFilter(filter, zero, si)};
-    const double v{y[0]};
-    ir.push_back(v);
-
-    if (std::abs(y[0]) < epsilon) {
-      // check a few more samples to ensure it isn't just zero-crossing
-      bool trulyDead{true};
-
-      // TODO: find good number for lookahead (10 for now)... User defined?
-      constexpr int lookahead{10};
-      for (int i{0}; i < lookahead; ++i) {
-        const auto after{std::abs(linearFilter(filter, zero, si)[0])};
-        if (after > epsilon) {
-          trulyDead = false;
-          break;
-        }
-      }
-
-      if (trulyDead)
-        break;
+  // find effective length
+  std::size_t irLength{ir.size()};
+  for (std::size_t i{ir.size() - 1}; i > 0; --i) {
+    if (std::abs(ir[i]) >= epsilon) {
+      irLength = i + 1;
+      break;
     }
   }
+
+  ir.resize(irLength);
 
   return ir;
 }
