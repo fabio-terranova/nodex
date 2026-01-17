@@ -14,18 +14,37 @@
 
 using Noddy::Filter::Signal;
 
+class DataViewerNode : public ImFlow::BaseNode {
+public:
+  DataViewerNode() {
+    setTitle("Data viewer");
+    setStyle(ImFlow::NodeStyle::green());
+    ImFlow::BaseNode::addIN<Signal>(">", Signal{},
+                                    ImFlow::ConnectionFilter::SameType());
+  }
+
+  void draw() override {
+    ImGui::SetNextItemWidth(100.f);
+    if (ImPlot::BeginPlot("", ImVec2(300, 150))) {
+      ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations,
+                        ImPlotAxisFlags_NoDecorations);
+      ImPlot::PlotLine("", getInVal<Signal>(">").data(),
+                       static_cast<int>(getInVal<Signal>(">").size()));
+
+      ImPlot::EndPlot();
+    }
+  }
+
+private:
+};
+
 class DataNode : public ImFlow::BaseNode {
 public:
   DataNode() {
     setTitle("Data");
     setStyle(ImFlow::NodeStyle::green());
-    ImFlow::BaseNode::addIN<Signal>(">", Signal{},
-                                    ImFlow::ConnectionFilter::SameType());
     ImFlow::BaseNode::addOUT<Signal>(">", nullptr)->behaviour([this]() {
-      if (isSource_)
-        return data_;
-      else
-        return getInVal<Signal>(">");
+      return data_;
     });
   }
 
@@ -34,23 +53,15 @@ public:
     if (ImPlot::BeginPlot("", ImVec2(300, 150))) {
       ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations,
                         ImPlotAxisFlags_NoDecorations);
-      if (isSource_)
-        ImPlot::PlotLine("", data_.data(), static_cast<int>(data_.size()));
-      else
-        ImPlot::PlotLine("", getInVal<Signal>(">").data(),
-                         static_cast<int>(getInVal<Signal>(">").size()));
+      ImPlot::PlotLine("", data_.data(), static_cast<int>(data_.size()));
 
       ImPlot::EndPlot();
     }
   }
 
-  void setData(const Signal& data) {
-    isSource_ = true;
-    data_     = data;
-  };
+  void setData(const Signal& data) { data_ = data; };
 
 private:
-  bool   isSource_{false};
   Signal data_{};
 };
 
@@ -96,8 +107,8 @@ struct NodeEditor : ImFlow::BaseNode {
     nf1->setFrequency(50.0);
     auto nf2 = mINF.addNode<FilterNode>({550, 200});
     nf2->setFrequency(150.0);
-    auto n2 = mINF.addNode<DataNode>({750, 50});
-    auto n3 = mINF.addNode<DataNode>({750, 300});
+    auto n2 = mINF.addNode<DataViewerNode>({750, 50});
+    auto n3 = mINF.addNode<DataViewerNode>({750, 300});
 
     // Sample data
     Signal y(1000);
