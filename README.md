@@ -20,7 +20,9 @@ cmake --build .
 ```
 ├── app/          # Main application code
 ├── core/         # Core library
+├── bindings/     # Language bindings (python with pybind11 for now)
 ├── external/     # Third-party dependencies
+├── examples/     # Example python scripts
 └── tests/        # Test files
 ```
 
