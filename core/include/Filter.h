@@ -6,15 +6,15 @@
 #include <numbers>
 #include <vector>
 
-namespace Noddy {
+namespace Nodex {
 namespace Filter {
 // Using std aliases
 using namespace std::complex_literals;
 using std::numbers::pi;
 
 // Using Utils aliases
-using Noddy::Utils::Complex;
-using Noddy::Utils::Signal;
+using Nodex::Utils::Complex;
+using Nodex::Utils::Signal;
 
 // Filter transfer function coefficients representation
 struct Coeffs {
@@ -83,6 +83,6 @@ ZPK buttap(const int n);
 ZPK cheb1ap(const int n, const double rp);
 ZPK cheb2ap(const int n, const double rs);
 } // namespace Filter
-} // namespace Noddy
+} // namespace Nodex
 
 #endif // INCLUDE_CORE_FILTER_H_

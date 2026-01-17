@@ -4,7 +4,7 @@
 #include "Filter.h"
 #include <Eigen/Dense>
 
-namespace Noddy {
+namespace Nodex {
 namespace Filter {
 using Eigen::Index;
 using Eigen::VectorXcd;
@@ -65,6 +65,6 @@ VectorXd fftFilter(const EigenCoeffs&                filter,
 EigenCoeffs zpk2tf(const EigenZPK& zpk);
 VectorXd    roots2poly(const Eigen::Ref<const VectorXcd>& roots);
 } // namespace Filter
-} // namespace Noddy
+} // namespace Nodex
 
 #endif // INCLUDE_INCLUDE_FILTEREIGEN_H_

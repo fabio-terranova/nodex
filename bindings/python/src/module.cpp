@@ -11,16 +11,16 @@ lfilter_multi(py::array_t<double, py::array::c_style | py::array::forcecast> b,
               py::array_t<double, py::array::c_style | py::array::forcecast> a,
               py::array_t<double, py::array::c_style | py::array::forcecast> x);
 
-PYBIND11_MODULE(noddy_py, m, py::mod_gil_not_used()) {
-  using Noddy::Filter::Signal;
+PYBIND11_MODULE(nodex_py, m, py::mod_gil_not_used()) {
+  using Nodex::Filter::Signal;
 
-  m.doc() = "Python bindings for Noddy filter operations.";
+  m.doc() = "Python bindings for Nodex filter operations.";
 
   m.def(
       "fft_filter",
       [](const std::vector<double>& b, const std::vector<double>& a,
          const Signal& x, const double epsilon, const std::size_t max_length) {
-        Signal output{Noddy::Filter::fftFilter({b, a}, x, epsilon, max_length)};
+        Signal output{Nodex::Filter::fftFilter({b, a}, x, epsilon, max_length)};
 
         return output;
       },
@@ -30,7 +30,7 @@ PYBIND11_MODULE(noddy_py, m, py::mod_gil_not_used()) {
   m.def(
       "lfilter",
       [](const std::vector<double>& b, const std::vector<double>& a,
-         const Signal& x) { return Noddy::Filter::linearFilter({b, a}, x); },
+         const Signal& x) { return Nodex::Filter::linearFilter({b, a}, x); },
       py::arg("b"), py::arg("a"), py::arg("x"));
 
   m.def("lfilter_multi", &lfilter_multi, py::arg("b"), py::arg("a"),
@@ -41,7 +41,7 @@ py::array_t<double> lfilter_multi(
     py::array_t<double, py::array::c_style | py::array::forcecast> b,
     py::array_t<double, py::array::c_style | py::array::forcecast> a,
     py::array_t<double, py::array::c_style | py::array::forcecast> x) {
-  using namespace Noddy::Filter;
+  using namespace Nodex::Filter;
 
   const auto n_channels{static_cast<Index>(x.shape(0))};
   const auto n_samples{static_cast<Index>(x.shape(1))};

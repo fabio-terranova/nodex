@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16...3.28)
 
-project(noddy LANGUAGES CXX C)
+project(nodex LANGUAGES CXX C)
 
 include(CTest)
 

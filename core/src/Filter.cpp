@@ -13,7 +13,7 @@
 #include <omp.h>
 #endif
 
-namespace Noddy {
+namespace Nodex {
 namespace Filter {
 using Eigen::ArrayXcd;
 using Eigen::ArrayXd;
@@ -500,4 +500,4 @@ Signal fftFilter(const Coeffs& filter, const Signal& x, const double epsilon,
   return y;
 }
 } // namespace Filter
-} // namespace Noddy
+} // namespace Nodex

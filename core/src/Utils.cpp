@@ -1,7 +1,7 @@
 #include "Utils.h"
 #include <fstream>
 
-namespace Noddy {
+namespace Nodex {
 namespace Utils {
 ArrayXi arange(const int start, int stop, const int step) {
   if (step == 0)
@@ -36,4 +36,4 @@ Eigen::VectorXd readVectorFromFile(const std::string& filename) {
   return vec;
 }
 } // namespace Utils
-} // namespace Noddy
+} // namespace Nodex

@@ -12,7 +12,7 @@
 #include <iostream>
 #include <string>
 
-using Noddy::Filter::Signal;
+using Nodex::Filter::Signal;
 
 class DataViewerNode : public ImFlow::BaseNode {
 public:
@@ -76,11 +76,11 @@ public:
       int    filterOrder{2};
       double fs{1000.0};
 
-      auto filter{Noddy::Filter::zpk2tf(
-          Noddy::Filter::iirFilter<Noddy::Filter::buttap,
-                                   Noddy::Filter::lowpass>(filterOrder, m_fc,
+      auto filter{Nodex::Filter::zpk2tf(
+          Nodex::Filter::iirFilter<Nodex::Filter::buttap,
+                                   Nodex::Filter::lowpass>(filterOrder, m_fc,
                                                            fs))};
-      return Noddy::Filter::linearFilter(filter, getInVal<Signal>(">"));
+      return Nodex::Filter::linearFilter(filter, getInVal<Signal>(">"));
     });
   }
 
@@ -157,7 +157,7 @@ void main() {
 )"};
 
 int main(void) {
-  std::cout << "Noddy::Core v" << Noddy::Core::version() << "\n";
+  std::cout << "Nodex::Core v" << Nodex::Core::version() << "\n";
 
   if (!glfwInit())
     return -1;
@@ -172,7 +172,7 @@ int main(void) {
   float mainScale{
       ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor())};
   GLFWwindow* window{
-      glfwCreateWindow(kWinWidth, kWinHeight, "Noddy GUI", nullptr, nullptr)};
+      glfwCreateWindow(kWinWidth, kWinHeight, "Nodex GUI", nullptr, nullptr)};
   if (!window) {
     std::cerr << "Failed to create GLFW window\n";
 
@@ -299,12 +299,12 @@ int main(void) {
 
   std::vector<Eigen::VectorXd> yf(4);
   for (std::size_t i{0}; i < 4; ++i) {
-    Noddy::Filter::ZPK digitalFilter{
-        Noddy::Filter::iirFilter<Noddy::Filter::buttap, Noddy::Filter::lowpass>(
+    Nodex::Filter::ZPK digitalFilter{
+        Nodex::Filter::iirFilter<Nodex::Filter::buttap, Nodex::Filter::lowpass>(
             filterOrder, fc - 25 * i, fs)};
 
-    Noddy::Filter::EigenCoeffs filter{};
-    filter = Noddy::Filter::zpk2tf(Noddy::Filter::EigenZPK(digitalFilter));
+    Nodex::Filter::EigenCoeffs filter{};
+    filter = Nodex::Filter::zpk2tf(Nodex::Filter::EigenZPK(digitalFilter));
 
     yf[i] = linearFilter(filter, y);
   }

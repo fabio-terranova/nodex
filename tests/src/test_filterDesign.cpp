@@ -2,7 +2,7 @@
 #include <cassert>
 #include <iostream>
 
-using namespace Noddy::Filter;
+using namespace Nodex::Filter;
 
 bool isAlmostEqual(const Complex& a, const Complex& b,
                    const double tol = 1e-6) {
@@ -31,7 +31,7 @@ bool operator==(const ZPK& first, const ZPK& second) {
   return true;
 }
 
-template <Noddy::Filter::Type ftype>
+template <Nodex::Filter::Type ftype>
 bool testButterworth(const int order, const double fc, const double fs,
                      const ZPK& expected) {
   std::cout << "--- Testing Butterworth filter design ---\n";
@@ -43,7 +43,7 @@ bool testButterworth(const int order, const double fc, const double fs,
   return digitalFilter == expected;
 }
 
-template <Noddy::Filter::Type ftype>
+template <Nodex::Filter::Type ftype>
 bool testChebyshevI(const int order, const double fc, const double fs,
                      const double rp, const ZPK& expected) {
   std::cout << "--- Testing Chebyshev I filter design ---\n";
@@ -55,7 +55,7 @@ bool testChebyshevI(const int order, const double fc, const double fs,
   return digitalFilter == expected;
 }
 
-template <Noddy::Filter::Type ftype>
+template <Nodex::Filter::Type ftype>
 bool testChebyshevII(const int order, const double fc, const double fs,                        
                       const double rs, const ZPK& expected) {
   std::cout << "--- Testing Chebyshev II filter design ---\n";
@@ -67,7 +67,7 @@ bool testChebyshevII(const int order, const double fc, const double fs,
 }
 
 int main() {
-  using namespace Noddy::Filter;
+  using namespace Nodex::Filter;
 
   const auto order{2};
   const auto ftype{lowpass};

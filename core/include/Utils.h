@@ -5,7 +5,7 @@
 #include <chrono>
 #include <complex>
 
-namespace Noddy {
+namespace Nodex {
 namespace Utils {
 // Aliases for commonly used Eigen types
 using Eigen::ArrayXi;
@@ -36,6 +36,6 @@ private:
 
 ArrayXi arange(const int start, int stop, const int step);
 } // namespace Utils
-} // namespace Noddy
+} // namespace Nodex
 
 #endif // INCLUDE_INCLUDE_UTILS_H_

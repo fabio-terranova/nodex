@@ -2,7 +2,7 @@
 #include <Eigen/Dense>
 #include <vector>
 
-namespace Noddy {
+namespace Nodex {
 namespace Core {
 using SignalMatrix = Eigen::Matrix<double, 2, 2>;
 
@@ -73,4 +73,4 @@ private:
   Graph graph_;
 };
 } // namespace Core
-} // namespace Noddy
+} // namespace Nodex

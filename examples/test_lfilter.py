@@ -2,7 +2,7 @@ import time
 from contextlib import contextmanager
 
 import matplotlib.pyplot as plt
-import noddy_py
+import nodex_py
 import numpy as np
 from scipy import signal
 
@@ -37,10 +37,10 @@ with timed("Time taken (py)"):
     output = signal.lfilter(b, a, data)
 
 with timed("Time taken (cpp)"):
-    outputcpp = np.array(noddy_py.lfilter(b=b, a=a, x=data))
+    outputcpp = np.array(nodex_py.lfilter(b=b, a=a, x=data))
 
 with timed("Time taken (cpp, fft)"):
-    outputcpp_fft = np.array(noddy_py.fft_filter(b=b, a=a, x=data, epsilon=epsilon))
+    outputcpp_fft = np.array(nodex_py.fft_filter(b=b, a=a, x=data, epsilon=epsilon))
 
 # fft
 fft_data = np.fft.rfft(data)

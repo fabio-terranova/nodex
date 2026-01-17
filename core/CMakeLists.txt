@@ -1,16 +1,16 @@
 # Library target
-add_library(noddy_core SHARED
+add_library(nodex_core SHARED
   ./src/Utils.cpp
   ./src/Filter.cpp
   ./src/Core.cpp
 )
 
-target_include_directories(noddy_core PUBLIC include)
+target_include_directories(nodex_core PUBLIC include)
 
-target_link_libraries(noddy_core PUBLIC
+target_link_libraries(nodex_core PUBLIC
     eigen
     OpenMP::OpenMP_CXX
 )
 
 # Enable import library generation on Windows
-set_target_properties(noddy_core PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+set_target_properties(nodex_core PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)

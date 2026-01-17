@@ -2,7 +2,7 @@ import time
 from contextlib import contextmanager
 
 import matplotlib.pyplot as plt
-import noddy_py
+import nodex_py
 import numpy as np
 from scipy import signal
 
@@ -53,7 +53,7 @@ with timed("Time taken (py, axis=1)"):
     output_py = signal.lfilter(b, a, data, axis=1)
 
 with timed("Time taken (cpp, multi)"):
-    output_cpp_multi = np.array(noddy_py.lfilter_multi(b=b, a=a, x=data))
+    output_cpp_multi = np.array(nodex_py.lfilter_multi(b=b, a=a, x=data))
 
 if plot:
     # square grid of subplots
@@ -66,7 +66,7 @@ if plot:
         axes[ch].plot(t, data[ch, :], label="input", alpha=0.3)
         axes[ch].plot(t, output_py[ch, :], label="scipy", alpha=0.7)
         axes[ch].plot(
-            t, output_cpp_multi[ch, :], label="noddy multi", linestyle="--", alpha=0.7
+            t, output_cpp_multi[ch, :], label="nodex multi", linestyle="--", alpha=0.7
         )
     axes[0].legend()
     plt.show()

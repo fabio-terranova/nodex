@@ -3,10 +3,10 @@
 
 #include <string_view>
 
-namespace Noddy {
+namespace Nodex {
 namespace Core {
 inline constexpr std::string_view version() { return "0.1.0"; };
 } // namespace Core
-} // namespace Noddy
+} // namespace Nodex
 
 #endif // INCLUDE_CORE_CORE_H_
