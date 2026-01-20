@@ -63,14 +63,7 @@ public:
   }
 
   void draw() override {
-    ImGui::SetNextItemWidth(100.f);
-    if (ImPlot::BeginPlot("", ImVec2(300, 150))) {
-      ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations,
-                        ImPlotAxisFlags_NoDecorations);
-      ImPlot::PlotLine("", data_.data(), static_cast<int>(data_.size()));
-
-      ImPlot::EndPlot();
-    }
+    ImGui::Text("Samples: %d", static_cast<int>(data_.size()));
   }
 
   void setData(const Signal& data) { data_ = data; };
@@ -162,11 +155,12 @@ public:
       Eigen::ArrayXd data{(hMap.abs())};
 
       ImPlot::SetupAxes("Frequency (Hz)", "Magnitude",
-                        ImPlotAxisFlags_NoDecorations,
-                        ImPlotAxisFlags_NoDecorations);
+                        ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit,
+                        ImPlotAxisFlags_NoDecorations |
+                            ImPlotAxisFlags_AutoFit);
       ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
       ImPlot::SetupAxisScale(ImAxis_Y1, ImPlotScale_Log10);
-      ImPlot::SetupAxisLimits(ImAxis_X1, 1.0, m_fs / 2.0);
+      ImPlot::SetupAxisLimits(ImAxis_X1, 10.0, m_fs / 2.0);
       ImPlot::SetupAxisLimits(ImAxis_Y1, 1e-6, 10.0);
       ImPlot::PlotLine("", data.data(), data.size());
 
@@ -198,7 +192,8 @@ struct NodeEditor : ImFlow::BaseNode {
   NodeEditor() : BaseNode() {
     mINF.getGrid().config().zoom_enabled = true;
 
-    auto n1  = mINF.addNode<DataNode>({50, 50});
+    auto dataNode  = mINF.addNode<DataNode>({50, 50});
+    auto n1        = mINF.addNode<DataViewerNode>({250, 150});
     auto nf1 = mINF.addNode<FilterNode>({550, 100});
     nf1->setFrequency(50.0f);
     auto nf2 = mINF.addNode<FilterNode>({550, 200});
@@ -215,10 +210,10 @@ struct NodeEditor : ImFlow::BaseNode {
               0.5);
     });
 
-    n1.get()->setData(y);
-
-    n1->outPin(">")->createLink(nf1->inPin(">"));
-    n1->outPin(">")->createLink(nf2->inPin(">"));
+    dataNode.get()->setData(y);
+    dataNode->outPin(">")->createLink(n1->inPin(">"));
+    dataNode->outPin(">")->createLink(nf1->inPin(">"));
+    dataNode->outPin(">")->createLink(nf2->inPin(">"));
     nf1->outPin(">")->createLink(n2->inPin(">"));
     nf2->outPin(">")->createLink(n3->inPin(">"));
   }
@@ -381,7 +376,7 @@ int main(void) {
   ImGui_ImplOpenGL3_Init("#version 330 core");
 
   // Sample data
-  Eigen::ArrayXdi y(1000);
+  Eigen::ArrayXd y(1000);
   // Gaussian noise between -1.0 and 1.0
   std::generate(y.data(), y.data() + y.size(), []() {
     return 2.0 *
@@ -426,35 +421,42 @@ int main(void) {
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
     // Sample window
+    const auto window_size      = io.DisplaySize - ImVec2(1, 1);
+    const auto window_pos       = ImVec2(1, 1);
+    const auto node_editor_size = window_size - ImVec2(16, 16);
+    ImGui::SetNextWindowSize(window_size);
+    ImGui::SetNextWindowPos(window_pos);
     {
-      ImGui::Begin("Simple window");
-      ImGui::Text("FPS: %0.3f", ImGui::GetIO().Framerate);
-
-      if (ImPlot::BeginPlot("Data plot")) {
-        ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations,
-                          ImPlotAxisFlags_NoDecorations |
-                              ImPlotAxisFlags_AutoFit);
-        ImPlot::PlotLine("Raw", y.data(), static_cast<int>(y.size()));
-
-        for (std::size_t i{0}; i < 4; ++i) {
-          std::string fString{"Filtered (fc = " + std::to_string(100 - 25 * i) +
-                              " Hz)"};
-          ImPlot::PlotLine(fString.c_str(), yf[i].data(),
-                           static_cast<int>(yf[i].size()));
-        }
-        ImPlot::EndPlot();
-      }
-
       ImGui::Begin("Node Editor", nullptr,
-                   ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse);
-      nodeEditor->set_size(nodeEditorSize);
+                   ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
+                       ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
+      nodeEditor->set_size(node_editor_size);
       nodeEditor->draw();
       ImGui::End();
-
-      // ImGui::ShowStackToolWindow();
-
-      ImGui::End();
     }
+
+    {
+      // ImGui::Begin("Simple window");
+      // ImGui::Text("FPS: %0.3f", ImGui::GetIO().Framerate);
+      //
+      // if (ImPlot::BeginPlot("Data plot")) {
+      //   ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations,
+      //                     ImPlotAxisFlags_NoDecorations |
+      //                         ImPlotAxisFlags_AutoFit);
+      //   ImPlot::PlotLine("Raw", y.data(), static_cast<int>(y.size()));
+      //
+      //   for (std::size_t i{0}; i < 4; ++i) {
+      //     std::string fString{"Filtered (fc = " + std::to_string(100 - 25 * i) +
+      //                         " Hz)"};
+      //     ImPlot::PlotLine(fString.c_str(), yf[i].data(),
+      //                      static_cast<int>(yf[i].size()));
+      //   }
+      //   ImPlot::EndPlot();
+      // }
+      // ImGui::End();
+    }
+
+    // ImGui::ShowStackToolWindow();
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
