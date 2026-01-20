@@ -74,6 +74,9 @@ ZPK bilinearTransform(const ZPK& analog, const double fs);
 ZPK lp2lp(const ZPK& input, const double wc);
 ZPK lp2hp(const ZPK& input, const double wc);
 
+std::vector<Complex> freqz(const ZPK&                 digitalFilter,
+                           const std::vector<double>& w);
+
 // IIR filter design functions
 template <ZPK (*F)(const int), Mode mode>
 ZPK iirFilter(const int n, double fc, double fs) {
@@ -85,31 +88,13 @@ ZPK iirFilter(const int n, double fc, double fs, const double param) {
   return analog2digital(F(n, param), fc, fs, mode);
 }
 
+ZPK iirFilter(const int n, double fc, double fs, const Type type = butter,
+              const Mode mode = lowpass, const double param = 5.0);
+
 // Analog prototype filters
 ZPK buttap(const int n);
 ZPK cheb1ap(const int n, const double rp);
 ZPK cheb2ap(const int n, const double rs);
-
-inline ZPK iirFilter(const int n, double fc, double fs,
-                     const Type type = butter, const Mode mode = lowpass,
-                     const double param = 5.0) {
-  ZPK analogFilter{};
-  switch (type) {
-  case butter:
-    analogFilter = buttap(n);
-    break;
-  case cheb1:
-    analogFilter = cheb1ap(n, param);
-    break;
-  case cheb2:
-    analogFilter = cheb2ap(n, param);
-    break;
-  default:
-    break;
-  }
-
-  return analog2digital(analogFilter, fc, fs, mode);
-}
 } // namespace Filter
 } // namespace Nodex
 

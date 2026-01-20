@@ -21,7 +21,6 @@ using Eigen::ArrayXi;
 using Eigen::Index;
 using Eigen::VectorXcd;
 using Eigen::VectorXd;
-using Eigen::VectorXi;
 using Utils::arange;
 
 template <typename T>
@@ -111,7 +110,7 @@ ZPK cheb2ap(const int n, const double rs) {
   const double de{1.0 / std::sqrt(std::pow(10, 0.1 * rs) - 1)};
   const double mu{std::asinh(1.0 / de) / n};
 
-  VectorXi m{};
+  ArrayXi m{};
   if (n % 2) {
     ArrayXi m1{arange(-n + 1, 0, 2)};
     ArrayXi m2{arange(2, n, 2)};
@@ -121,10 +120,10 @@ ZPK cheb2ap(const int n, const double rs) {
     m = arange(-n + 1, n, 2);
   }
 
-  const VectorXcd z{
-      -(1i / (pi * m.cast<double>() / (2.0 * n)).array().sin()).conjugate()};
+  const ArrayXcd z{
+      -(1i / (pi * m.cast<double>() / (2.0 * n)).sin()).conjugate()};
 
-  VectorXcd p{
+  ArrayXcd p{
       -(1i * pi * arange(-n + 1, n, 2).cast<Complex>() / (2 * n)).exp(),
   };
   p = std::sinh(mu) * p.real() + 1i * std::cosh(mu) * p.imag();
@@ -156,6 +155,26 @@ ZPK buttap(const int n) {
   return ZPK{zVec, pVec, 1.0};
 }
 
+ZPK iirFilter(const int n, double fc, double fs, const Type type,
+              const Mode mode, const double param) {
+  ZPK analogFilter{};
+  switch (type) {
+  case butter:
+    analogFilter = buttap(n);
+    break;
+  case cheb1:
+    analogFilter = cheb1ap(n, param);
+    break;
+  case cheb2:
+    analogFilter = cheb2ap(n, param);
+    break;
+  default:
+    break;
+  }
+
+  return analog2digital(analogFilter, fc, fs, mode);
+}
+
 double warpFreq(const double fc, const double fs) {
   return std::tan(pi * fc / fs);
 }
@@ -179,16 +198,6 @@ ZPK bilinearTransform(const ZPK& analog, const double fs) {
   dz = (fs2 + az) / (fs2 - az);
   dp = (fs2 + ap) / (fs2 - ap);
 
-  // if (numZeros > 0)
-  //   digital.z = (fs2 + analog.z) / (fs2 - analog.z);
-  // else
-  //   digital.z = VectorXcd{0};
-  //
-  // if (numPoles > 0)
-  //   digital.p = (fs2 + analog.p.array()) / (fs2 - analog.p.array());
-  // else
-  //   digital.p = VectorXcd{0};
-
   const auto degree{analog.p.size() - analog.z.size()};
   for (std::size_t i{0}; i < degree; ++i) {
     digital.z.push_back(-1.0);
@@ -203,18 +212,48 @@ ZPK bilinearTransform(const ZPK& analog, const double fs) {
   return digital;
 }
 
+ArrayXcd freqz(const EigenZPK&                  digitalFilter,
+               const Eigen::Ref<const ArrayXd>& w) {
+  ArrayXcd h{w.size()};
+  ArrayXcd zm1{(w * 1i).exp()};
+
+  for (auto i{0}; i < w.size(); i++) {
+    h(i) = digitalFilter.k * (w(i) - digitalFilter.z).prod() /
+           (w(i) - digitalFilter.p).prod();
+  }
+
+  return h;
+}
+
+std::vector<Complex> freqz(const ZPK&                 digitalFilter,
+                           const std::vector<double>& w) {
+  std::vector<Complex> h;
+  h.resize(w.size());
+  EigenMap<ArrayXcd> hMap{h.data(), static_cast<Index>(h.size())};
+
+  EigenMap<const ArrayXd>  wMap{w.data(), static_cast<Index>(w.size())};
+  EigenMap<const ArrayXcd> zMap{digitalFilter.z.data(),
+                                static_cast<Index>(digitalFilter.z.size())};
+  EigenMap<const ArrayXcd> pMap{digitalFilter.p.data(),
+                                static_cast<Index>(digitalFilter.p.size())};
+
+  hMap = freqz(EigenZPK(digitalFilter), wMap);
+
+  return h;
+}
+
 ZPK lp2lp(const ZPK& input, const double wc) {
   ZPK output{};
   output.z.resize(input.z.size());
   output.p.resize(input.p.size());
 
-  EigenMap<VectorXcd> oz(output.z.data(), static_cast<Index>(output.z.size()));
-  EigenMap<VectorXcd> op(output.p.data(), static_cast<Index>(output.p.size()));
+  EigenMap<ArrayXcd> oz(output.z.data(), static_cast<Index>(output.z.size()));
+  EigenMap<ArrayXcd> op(output.p.data(), static_cast<Index>(output.p.size()));
 
-  EigenMap<const VectorXcd> iz(input.z.data(),
-                               static_cast<Index>(input.z.size()));
-  EigenMap<const VectorXcd> ip(input.p.data(),
-                               static_cast<Index>(input.p.size()));
+  EigenMap<const ArrayXcd> iz(input.z.data(),
+                              static_cast<Index>(input.z.size()));
+  EigenMap<const ArrayXcd> ip(input.p.data(),
+                              static_cast<Index>(input.p.size()));
 
   // Transformation
   oz = iz * wc;
@@ -242,12 +281,14 @@ ZPK lp2hp(const ZPK& input, const double wc) {
   EigenMap<const ArrayXcd> ip(input.p.data(),
                               static_cast<Index>(input.p.size()));
 
-  oz = wc * iz.cwiseInverse();
-  op = wc * ip.cwiseInverse();
+  if (iz.size() > 0)
+    oz.head(iz.size()) = wc * iz.cwiseInverse();
+  if (ip.size() > 0)
+    op = wc * ip.cwiseInverse();
 
   if (degree > 0) {
-    EigenMap<VectorXcd>(output.z.data() + input.z.size(),
-                        static_cast<Index>(degree))
+    EigenMap<ArrayXcd>(output.z.data() + input.z.size(),
+                       static_cast<Index>(degree))
         .setZero();
   }
 
@@ -256,14 +297,14 @@ ZPK lp2hp(const ZPK& input, const double wc) {
   return output;
 }
 
-VectorXd roots2poly(const Eigen::Ref<const VectorXcd>& roots) {
-  VectorXcd coeffs{1};
+ArrayXd roots2poly(const Eigen::Ref<const ArrayXcd>& roots) {
+  ArrayXcd coeffs{1};
   coeffs(0) = 1.0;
 
   for (Index i{0}; i < roots.size(); ++i) {
     const Complex& r{roots[i]};
 
-    VectorXcd temp{VectorXcd::Zero(coeffs.size() + 1)};
+    ArrayXcd temp{ArrayXcd::Zero(coeffs.size() + 1)};
     temp.head(coeffs.size()) += coeffs;
     temp.tail(coeffs.size()) -= r * coeffs;
 
@@ -274,9 +315,8 @@ VectorXd roots2poly(const Eigen::Ref<const VectorXcd>& roots) {
 }
 
 std::vector<double> roots2poly(const std::vector<Complex>& roots) {
-  EigenMap<const VectorXcd> rMap(roots.data(),
-                                 static_cast<Index>(roots.size()));
-  VectorXd                  coeffs{roots2poly(rMap)};
+  EigenMap<const ArrayXcd> rMap(roots.data(), static_cast<Index>(roots.size()));
+  ArrayXd                  coeffs{roots2poly(rMap)};
   return std::vector<double>(coeffs.data(), coeffs.data() + coeffs.size());
 }
 
@@ -308,29 +348,29 @@ RowMajorMatrixXd linearFilter(const EigenCoeffs&&                       filter,
 #pragma omp parallel for
 #endif
   for (Index r = 0; r < nRows; ++r) {
-    y.row(r) = linearFilter(filter, Eigen::Ref<const VectorXd>{x.row(r)},
-                            Eigen::Ref<VectorXd>{state.row(r)});
+    y.row(r) = linearFilter(filter, Eigen::Ref<const ArrayXd>{x.row(r)},
+                            Eigen::Ref<ArrayXd>{state.row(r)});
   }
 
   return y;
 }
 
-VectorXd linearFilter(const EigenCoeffs&                filter,
-                      const Eigen::Ref<const VectorXd>& x,
-                      Eigen::Ref<VectorXd>              state) {
+ArrayXd linearFilter(const EigenCoeffs&               filter,
+                     const Eigen::Ref<const ArrayXd>& x,
+                     Eigen::Ref<ArrayXd>              state) {
   const Index nB{filter.b.size()};
   const Index nA{filter.a.size()};
   const Index nX{x.size()};
   const Index nS{std::max(nB, nA) - 1};
 
   if (state.size() < nS) {
-    VectorXd newState = VectorXd::Zero(nS);
+    ArrayXd newState = ArrayXd::Zero(nS);
     if (state.size() > 0) {
       newState.head(state.size()) = state;
     }
     state = newState;
   }
-  VectorXd y(nX);
+  ArrayXd y(nX);
 
   for (Index k{0}; k < nX; ++k) {
     const double xk = x(k);
@@ -349,29 +389,29 @@ VectorXd linearFilter(const EigenCoeffs&                filter,
   return y;
 }
 
-VectorXd linearFilter(const EigenCoeffs&                filter,
-                      const Eigen::Ref<const VectorXd>& x) {
+ArrayXd linearFilter(const EigenCoeffs&               filter,
+                     const Eigen::Ref<const ArrayXd>& x) {
   const auto nS{std::max(filter.b.size(), filter.a.size()) - 1};
-  VectorXd   state{VectorXd::Zero(nS)};
+  ArrayXd    state{ArrayXd::Zero(nS)};
 
   return linearFilter(filter, x, state);
 }
 
 Signal linearFilter(const Coeffs& filter, const Signal& x, Signal& si) {
-  const EigenMap<const VectorXd> xMap(x.data(), static_cast<Index>(x.size()));
-  EigenMap<VectorXd> siMap(si.data(), static_cast<Index>(si.size()));
+  const EigenMap<const ArrayXd> xMap(x.data(), static_cast<Index>(x.size()));
+  EigenMap<ArrayXd>             siMap(si.data(), static_cast<Index>(si.size()));
 
   EigenCoeffs eigenFilter{
-      EigenMap<const VectorXd>(filter.b.data(),
-                               static_cast<Index>(filter.b.size())),
-      EigenMap<const VectorXd>(filter.a.data(),
-                               static_cast<Index>(filter.a.size()))};
+      EigenMap<const ArrayXd>(filter.b.data(),
+                              static_cast<Index>(filter.b.size())),
+      EigenMap<const ArrayXd>(filter.a.data(),
+                              static_cast<Index>(filter.a.size()))};
 
-  Eigen::Ref<const VectorXd> xVec{xMap};
-  Eigen::Ref<VectorXd>       siVec{siMap};
-  const VectorXd             yMap{linearFilter(eigenFilter, xVec, siVec)};
-  Signal                     y(static_cast<std::size_t>(yMap.size()));
-  EigenMap<VectorXd>(y.data(), static_cast<Index>(y.size())) = yMap;
+  Eigen::Ref<const ArrayXd> xVec{xMap};
+  Eigen::Ref<ArrayXd>       siVec{siMap};
+  const ArrayXd             yMap{linearFilter(eigenFilter, xVec, siVec)};
+  Signal                    y(static_cast<std::size_t>(yMap.size()));
+  EigenMap<ArrayXd>(y.data(), static_cast<Index>(y.size())) = yMap;
 
   return y;
 }
@@ -383,16 +423,16 @@ Signal linearFilter(const Coeffs& filter, const Signal& x) {
   return linearFilter(filter, x, si);
 }
 
-VectorXd findEffectiveIR(const EigenCoeffs& filter, const double epsilon,
-                         const Index maxLength) {
+ArrayXd findEffectiveIR(const EigenCoeffs& filter, const double epsilon,
+                        const Index maxLength) {
   const Index nS{std::max(filter.b.size(), filter.a.size()) - 1};
-  VectorXd    si{VectorXd::Zero(nS)};
+  ArrayXd     si{ArrayXd::Zero(nS)};
 
-  VectorXd impulse{VectorXd::Zero(maxLength)};
+  ArrayXd impulse{ArrayXd::Zero(maxLength)};
   impulse(0) = 1.0;
-  Eigen::Ref<const VectorXd> impulseRef{impulse};
-  Eigen::Ref<VectorXd>       siRef{si};
-  VectorXd                   ir{linearFilter(filter, impulseRef, siRef)};
+  Eigen::Ref<const ArrayXd> impulseRef{impulse};
+  Eigen::Ref<ArrayXd>       siRef{si};
+  ArrayXd                   ir{linearFilter(filter, impulseRef, siRef)};
 
   // find effective length
   Index irLength{ir.size()};
@@ -429,8 +469,8 @@ Signal findEffectiveIR(const Coeffs& filter, const double epsilon,
   return ir;
 }
 
-VectorXd fastConvolve(const Eigen::Ref<const VectorXd>& f,
-                      const Eigen::Ref<const VectorXd>& g) {
+ArrayXd fastConvolve(const Eigen::Ref<const ArrayXd>& f,
+                     const Eigen::Ref<const ArrayXd>& g) {
   Eigen::FFT<double> fft;
 
   const std::size_t L{static_cast<std::size_t>(f.size())};
@@ -460,28 +500,27 @@ VectorXd fastConvolve(const Eigen::Ref<const VectorXd>& f,
   return yPad.head(static_cast<Index>(N));
 }
 
-VectorXd fastConvolve(const Signal& f, const Eigen::Ref<const VectorXd>& g) {
-  const EigenMap<const VectorXd> fMap(f.data(), static_cast<Index>(f.size()));
+ArrayXd fastConvolve(const Signal& f, const Eigen::Ref<const ArrayXd>& g) {
+  const EigenMap<const ArrayXd> fMap(f.data(), static_cast<Index>(f.size()));
 
   return fastConvolve(fMap, g);
 }
 
 Signal fastConvolve(const Signal& f, const Signal& g) {
-  const EigenMap<const VectorXd> fMap(f.data(), static_cast<Index>(f.size()));
-  const EigenMap<const VectorXd> gMap(g.data(), static_cast<Index>(g.size()));
+  const EigenMap<const ArrayXd> fMap(f.data(), static_cast<Index>(f.size()));
+  const EigenMap<const ArrayXd> gMap(g.data(), static_cast<Index>(g.size()));
 
-  const VectorXd yMap{fastConvolve(fMap, gMap)};
+  const ArrayXd yMap{fastConvolve(fMap, gMap)};
 
   Signal y(static_cast<std::size_t>(yMap.size()));
-  EigenMap<VectorXd>(y.data(), static_cast<Index>(y.size())) = yMap;
+  EigenMap<ArrayXd>(y.data(), static_cast<Index>(y.size())) = yMap;
 
   return y;
 }
 
-VectorXd fftFilter(const EigenCoeffs&                filter,
-                   const Eigen::Ref<const VectorXd>& x, const double epsilon,
-                   const Index maxLength) {
-  const VectorXd filterIR{findEffectiveIR(filter, epsilon, maxLength)};
+ArrayXd fftFilter(const EigenCoeffs& filter, const Eigen::Ref<const ArrayXd>& x,
+                  const double epsilon, const Index maxLength) {
+  const ArrayXd filterIR{findEffectiveIR(filter, epsilon, maxLength)};
 
   return fastConvolve(filterIR, x).head(x.size());
 }
