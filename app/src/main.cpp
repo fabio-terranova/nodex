@@ -1,4 +1,5 @@
 #include "Core.h"
+#include "Filter.h"
 #include "FilterEigen.h"
 #include "ImNodeFlow.h"
 #include "imgui.h"
@@ -37,11 +38,9 @@ public:
 
   void draw() override {
     ImGui::SetNextItemWidth(100.f);
-    if (ImPlot::BeginPlot("", ImVec2(300, 150))) {
-      ImPlot::SetupAxes(nullptr, nullptr,
-                        ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit,
-                        ImPlotAxisFlags_NoDecorations |
-                            ImPlotAxisFlags_AutoFit);
+    if (ImPlot::BeginPlot("", ImVec2(300, 200))) {
+      ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_AutoFit,
+                        ImPlotAxisFlags_AutoFit);
       ImPlot::PlotLine("", getInVal<Signal>(">").data(),
                        static_cast<int>(getInVal<Signal>(">").size()));
 
@@ -89,13 +88,8 @@ public:
   }
 
   void draw() override {
-    ImGui::SetNextItemWidth(100.0f);
-    // Cutoff frequency slider
-    ImGui::InputDouble("fs (Hz)", &m_fs, 0.1, 1e6, "%.2f",
-                       ImGuiInputTextFlags_AutoSelectAll |
-                           ImGuiInputTextFlags_CharsScientific);
-
-    ImGui::SetNextItemWidth(100.0f);
+    float itemsWidth{150.0f};
+    ImGui::SetNextItemWidth(itemsWidth);
     // Filter type dropdown
     static const char* filterTypes[] = {"Butterworth", "Cheby1", "Cheby2"};
     int                filterTypeIdx = static_cast<int>(m_filterType);
@@ -103,7 +97,7 @@ public:
       m_filterType = static_cast<Nodex::Filter::Type>(filterTypeIdx);
     }
 
-    ImGui::SetNextItemWidth(100.0f);
+    ImGui::SetNextItemWidth(itemsWidth);
     // Filter mode dropdown
     static const char* filterModes[] = {"Lowpass", "Highpass"};
     int                filterModeIdx = static_cast<int>(m_filterMode);
@@ -111,17 +105,23 @@ public:
       m_filterMode = static_cast<Nodex::Filter::Mode>(filterModeIdx);
     }
 
-    ImGui::SetNextItemWidth(100.0f);
+    ImGui::SetNextItemWidth(itemsWidth);
     // Filter order slider
     ImGui::SliderInt("Order", &m_order, 1, 8);
 
-    ImGui::SetNextItemWidth(100.0f);
+    ImGui::SetNextItemWidth(itemsWidth);
     // Cutoff frequency slider
     ImGui::SliderDouble("fc (Hz)", &m_fc, 0.1,
                         m_fs / 2 - std::numeric_limits<double>::epsilon(),
                         "%.2f");
 
-    ImGui::SetNextItemWidth(100.0f);
+    ImGui::SetNextItemWidth(itemsWidth);
+    // Sampling frequency slider
+    ImGui::InputDouble("fs (Hz)", &m_fs, 0.1, 1e6, "%.2f",
+                       ImGuiInputTextFlags_AutoSelectAll |
+                           ImGuiInputTextFlags_CharsScientific);
+
+    ImGui::SetNextItemWidth(itemsWidth);
     // Ripple controls for Chebyshev filters
     if (m_filterType == Nodex::Filter::cheb1) {
       ImGui::SliderDouble("Passband ripple (dB)", &m_param, 0.1, 12.0, "%.2f");
@@ -130,7 +130,7 @@ public:
                           "%.2f");
     }
 
-    ImGui::SetNextItemWidth(100.0f);
+    ImGui::SetNextItemWidth(itemsWidth);
     if (ImPlot::BeginPlot("Freq response", ImVec2(300, 200))) {
       Nodex::Filter::ZPK zpk{Nodex::Filter::iirFilter(
           m_order, m_fc, m_fs, m_filterType, m_filterMode, m_param)};
@@ -154,10 +154,8 @@ public:
       // Magnitude of the filter response
       Eigen::ArrayXd data{(hMap.abs())};
 
-      ImPlot::SetupAxes("Frequency (Hz)", "Magnitude",
-                        ImPlotAxisFlags_NoDecorations | ImPlotAxisFlags_AutoFit,
-                        ImPlotAxisFlags_NoDecorations |
-                            ImPlotAxisFlags_AutoFit);
+      ImPlot::SetupAxes("Frequency (Hz)", "Magnitude", 0,
+                        ImPlotAxisFlags_AutoFit);
       ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
       ImPlot::SetupAxisScale(ImAxis_Y1, ImPlotScale_Log10);
       ImPlot::SetupAxisLimits(ImAxis_X1, 10.0, m_fs / 2.0);
@@ -179,7 +177,7 @@ public:
 private:
   double              m_fs{10000.0};
   int                 m_order{2};
-  double              m_fc{100.0f};
+  double              m_fc{100.0};
   double              m_param{5.0f}; // Used for Chebyshev filters
   Nodex::Filter::Type m_filterType{Nodex::Filter::butter};
   Nodex::Filter::Mode m_filterMode{Nodex::Filter::lowpass};
@@ -192,14 +190,15 @@ struct NodeEditor : ImFlow::BaseNode {
   NodeEditor() : BaseNode() {
     mINF.getGrid().config().zoom_enabled = true;
 
-    auto dataNode  = mINF.addNode<DataNode>({50, 50});
-    auto n1        = mINF.addNode<DataViewerNode>({250, 150});
-    auto nf1 = mINF.addNode<FilterNode>({550, 100});
+    auto dataNode = mINF.addNode<DataNode>({50, 50});
+    auto n1       = mINF.addNode<DataViewerNode>({250, 150});
+    auto nf1      = mINF.addNode<FilterNode>({550, 100});
+    auto nf2      = mINF.addNode<FilterNode>({550, 500});
     nf1->setFrequency(50.0f);
-    auto nf2 = mINF.addNode<FilterNode>({550, 200});
     nf2->setFrequency(150.0);
-    auto n2 = mINF.addNode<DataViewerNode>({750, 50});
-    auto n3 = mINF.addNode<DataViewerNode>({750, 300});
+    nf2->setMode(Nodex::Filter::highpass);
+    auto n2 = mINF.addNode<DataViewerNode>({950, 50});
+    auto n3 = mINF.addNode<DataViewerNode>({950, 300});
 
     // Sample data
     Signal y(1000);
@@ -446,7 +445,8 @@ int main(void) {
       //   ImPlot::PlotLine("Raw", y.data(), static_cast<int>(y.size()));
       //
       //   for (std::size_t i{0}; i < 4; ++i) {
-      //     std::string fString{"Filtered (fc = " + std::to_string(100 - 25 * i) +
+      //     std::string fString{"Filtered (fc = " + std::to_string(100 - 25 *
+      //     i) +
       //                         " Hz)"};
       //     ImPlot::PlotLine(fString.c_str(), yf[i].data(),
       //                      static_cast<int>(yf[i].size()));
