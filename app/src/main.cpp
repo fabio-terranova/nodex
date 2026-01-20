@@ -160,7 +160,7 @@ public:
       ImPlot::SetupAxisScale(ImAxis_Y1, ImPlotScale_Log10);
       ImPlot::SetupAxisLimits(ImAxis_X1, 1.0, m_fs / 2.0);
       ImPlot::SetupAxisLimits(ImAxis_Y1, 1e-6, 10.0);
-      ImPlot::PlotLine("", data.data(), data.size());
+      ImPlot::PlotLine(nullptr, data.data(), static_cast<int>(data.size()));
 
       // draw cutoff frequency line
       ImPlot::DragLineX(1234, &m_fc, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
