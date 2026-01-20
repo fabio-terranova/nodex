@@ -158,7 +158,7 @@ public:
                         ImPlotAxisFlags_AutoFit);
       ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
       ImPlot::SetupAxisScale(ImAxis_Y1, ImPlotScale_Log10);
-      ImPlot::SetupAxisLimits(ImAxis_X1, 10.0, m_fs / 2.0);
+      ImPlot::SetupAxisLimits(ImAxis_X1, 1.0, m_fs / 2.0);
       ImPlot::SetupAxisLimits(ImAxis_Y1, 1e-6, 10.0);
       ImPlot::PlotLine("", data.data(), data.size());
 
@@ -169,8 +169,9 @@ public:
     }
   }
 
-  void setFrequency(float fc) { m_fc = fc; }
+  void setFrequency(double fc) { m_fc = fc; }
   void setOrder(int order) { m_order = order; }
+  void setParam(double param) { m_param = param; }
   void setType(Nodex::Filter::Type type) { m_filterType = type; }
   void setMode(Nodex::Filter::Mode mode) { m_filterMode = mode; }
 
@@ -190,15 +191,18 @@ struct NodeEditor : ImFlow::BaseNode {
   NodeEditor() : BaseNode() {
     mINF.getGrid().config().zoom_enabled = true;
 
-    auto dataNode = mINF.addNode<DataNode>({50, 50});
-    auto n1       = mINF.addNode<DataViewerNode>({250, 150});
-    auto nf1      = mINF.addNode<FilterNode>({550, 100});
-    auto nf2      = mINF.addNode<FilterNode>({550, 500});
+    auto dataNode{mINF.addNode<DataNode>({50, 50})};
+
+    auto n1{mINF.addNode<DataViewerNode>({250, 150})};
+    auto nf1{mINF.addNode<FilterNode>({550, 100})};
+    auto nf2{mINF.addNode<FilterNode>({550, 500})};
     nf1->setFrequency(50.0f);
     nf2->setFrequency(150.0);
     nf2->setMode(Nodex::Filter::highpass);
-    auto n2 = mINF.addNode<DataViewerNode>({950, 50});
-    auto n3 = mINF.addNode<DataViewerNode>({950, 300});
+    nf2->setType(Nodex::Filter::cheb2);
+
+    auto n2{mINF.addNode<DataViewerNode>({950, 50})};
+    auto n3{mINF.addNode<DataViewerNode>({950, 300})};
 
     // Sample data
     Signal y(1000);
