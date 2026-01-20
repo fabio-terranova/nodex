@@ -131,7 +131,7 @@ public:
     }
 
     ImGui::SetNextItemWidth(itemsWidth);
-    if (ImPlot::BeginPlot("Freq response", ImVec2(300, 200))) {
+    if (ImPlot::BeginPlot("Frequency response", ImVec2(300, 200))) {
       Nodex::Filter::ZPK zpk{Nodex::Filter::iirFilter(
           m_order, m_fc, m_fs, m_filterType, m_filterMode, m_param)};
 
@@ -160,7 +160,7 @@ public:
       ImPlot::SetupAxisScale(ImAxis_Y1, ImPlotScale_Log10);
       ImPlot::SetupAxisLimits(ImAxis_X1, 1.0, m_fs / 2.0);
       ImPlot::SetupAxisLimits(ImAxis_Y1, 1e-6, 10.0);
-      ImPlot::PlotLine(nullptr, data.data(), static_cast<int>(data.size()));
+      ImPlot::PlotLine("", data.data(), static_cast<int>(data.size()));
 
       // draw cutoff frequency line
       ImPlot::DragLineX(1234, &m_fc, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
