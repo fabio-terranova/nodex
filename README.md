@@ -2,7 +2,7 @@
 
 WORK IN PROGRESS...
 
-<img width="1602" height="1202" alt="image" src="https://github.com/user-attachments/assets/6ef5444f-cdd3-4e06-818c-acaed78642bf" />
+<img width="1450" height="1136" alt="image" src="https://github.com/user-attachments/assets/f1c9f8bc-fc77-4550-bdbd-c00c15996c6e" />
 
 ## Building
 
