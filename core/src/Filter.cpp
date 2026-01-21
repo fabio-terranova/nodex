@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include <cassert>
 #include <cstddef>
+#include <iostream>
 #include <ostream>
 #include <ranges>
 #include <unsupported/Eigen/FFT>
@@ -218,8 +219,8 @@ ArrayXcd freqz(const EigenZPK&                  digitalFilter,
   ArrayXcd zm1{(w * 1i).exp()};
 
   for (auto i{0}; i < w.size(); i++) {
-    h(i) = digitalFilter.k * (w(i) - digitalFilter.z).prod() /
-           (w(i) - digitalFilter.p).prod();
+    h(i) = digitalFilter.k * (zm1(i) - digitalFilter.z).prod() /
+           (zm1(i) - digitalFilter.p).prod();
   }
 
   return h;

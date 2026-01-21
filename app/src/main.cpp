@@ -90,11 +90,14 @@ public:
   void draw() override {
     float itemsWidth{150.0f};
     ImGui::SetNextItemWidth(itemsWidth);
+    bool needsUpdate{true};
+    // ImGui::SetNextItemWidth(itemsWidth);
     // Filter type dropdown
     static const char* filterTypes[] = {"Butterworth", "Cheby1", "Cheby2"};
     int                filterTypeIdx = static_cast<int>(m_filterType);
     if (ImGui::Combo("Type", &filterTypeIdx, filterTypes, 3)) {
       m_filterType = static_cast<Nodex::Filter::Type>(filterTypeIdx);
+      needsUpdate  = true;
     }
 
     ImGui::SetNextItemWidth(itemsWidth);
@@ -103,35 +106,41 @@ public:
     int                filterModeIdx = static_cast<int>(m_filterMode);
     if (ImGui::Combo("Mode", &filterModeIdx, filterModes, 2)) {
       m_filterMode = static_cast<Nodex::Filter::Mode>(filterModeIdx);
+      needsUpdate  = true;
     }
 
     ImGui::SetNextItemWidth(itemsWidth);
     // Filter order slider
-    ImGui::SliderInt("Order", &m_order, 1, 8);
+    if (ImGui::SliderInt("Order", &m_order, 1, 8))
+      needsUpdate = true;
 
     ImGui::SetNextItemWidth(itemsWidth);
     // Cutoff frequency slider
-    ImGui::SliderDouble("fc (Hz)", &m_fc, 0.1,
-                        m_fs / 2 - std::numeric_limits<double>::epsilon(),
-                        "%.2f");
+    if (ImGui::SliderDouble("fc (Hz)", &m_fc, 0.1,
+                            m_fs / 2 - std::numeric_limits<double>::epsilon(),
+                            "%.2f"))
+      needsUpdate = true;
 
     ImGui::SetNextItemWidth(itemsWidth);
     // Sampling frequency slider
-    ImGui::InputDouble("fs (Hz)", &m_fs, 0.1, 1e6, "%.2f",
-                       ImGuiInputTextFlags_AutoSelectAll |
-                           ImGuiInputTextFlags_CharsScientific);
+    if (ImGui::InputDouble("fs (Hz)", &m_fs, 0.1, 1e6, "%.2f",
+                           ImGuiInputTextFlags_AutoSelectAll |
+                               ImGuiInputTextFlags_CharsScientific))
+      needsUpdate = true;
 
     ImGui::SetNextItemWidth(itemsWidth);
     // Ripple controls for Chebyshev filters
     if (m_filterType == Nodex::Filter::cheb1) {
       ImGui::SliderDouble("Passband ripple (dB)", &m_param, 0.1, 12.0, "%.2f");
+      needsUpdate = true;
     } else if (m_filterType == Nodex::Filter::cheb2) {
       ImGui::SliderDouble("Stopband attenuation (dB)", &m_param, 0.1, 80.0,
                           "%.2f");
+      needsUpdate = true;
     }
 
     ImGui::SetNextItemWidth(itemsWidth);
-    if (ImPlot::BeginPlot("Frequency response", ImVec2(300, 200))) {
+    if (ImGui::BeginTabBar("Frequency response") || needsUpdate) {
       Nodex::Filter::ZPK zpk{Nodex::Filter::iirFilter(
           m_order, m_fc, m_fs, m_filterType, m_filterMode, m_param)};
 
@@ -146,26 +155,52 @@ public:
                                      static_cast<double>(nPoints - 1)};
         w.push_back(std::pow(10.0, exponent));
       }
+      needsUpdate = false;
 
       const std::vector<std::complex<double>> h{Nodex::Filter::freqz(zpk, w)};
       Eigen::Map<const Eigen::ArrayXcd>       hMap{
           h.data(), static_cast<Eigen::Index>(h.size())};
 
-      // Magnitude of the filter response
-      Eigen::ArrayXd data{(hMap.abs())};
+      if (ImGui::BeginTabItem("Magnitude")) {
+        if (ImPlot::BeginPlot("Magnitude plot", ImVec2(300, 200)) ||
+            needsUpdate) {
 
-      ImPlot::SetupAxes("Frequency (Hz)", "Magnitude", 0,
-                        ImPlotAxisFlags_AutoFit);
-      ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
-      ImPlot::SetupAxisScale(ImAxis_Y1, ImPlotScale_Log10);
-      ImPlot::SetupAxisLimits(ImAxis_X1, 1.0, m_fs / 2.0);
-      ImPlot::SetupAxisLimits(ImAxis_Y1, 1e-6, 10.0);
-      ImPlot::PlotLine("", data.data(), static_cast<int>(data.size()));
+          // Magnitude of the filter response
+          Eigen::ArrayXd data{(20 * hMap.abs().log10())};
 
-      // draw cutoff frequency line
-      ImPlot::DragLineX(1234, &m_fc, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+          ImPlot::SetupAxes("Frequency (Hz)", "Magnitude", 0,
+                            ImPlotAxisFlags_AutoFit);
+          ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
+          // ImPlot::SetupAxisScale(ImAxis_Y1, ImPlotScale_Log10);
+          ImPlot::SetupAxisLimits(ImAxis_X1, 1.0, m_fs / 2.0);
+          // ImPlot::SetupAxisLimits(ImAxis_Y1, 1e-6, 10.0);
+          ImPlot::PlotLine("", data.data(), static_cast<int>(data.size()));
 
-      ImPlot::EndPlot();
+          // draw cutoff frequency line
+          if (ImPlot::DragLineX(1234, &m_fc, ImVec4(1.0f, 0.0f, 0.0f, 1.0f)))
+            needsUpdate = true;
+
+          ImPlot::EndPlot();
+        }
+        ImGui::EndTabItem();
+      }
+      if (ImGui::BeginTabItem("Phase")) {
+        if (ImPlot::BeginPlot("Phase plot", ImVec2(300, 200)) || needsUpdate) {
+          Eigen::ArrayXd data{(hMap.arg())};
+
+          ImPlot::SetupAxes("Frequency (Hz)", "Phase", 0,
+                            ImPlotAxisFlags_AutoFit);
+          ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
+          // ImPlot::SetupAxisScale(ImAxis_Y1, ImPlotScale_Log10);
+          ImPlot::SetupAxisLimits(ImAxis_X1, 1.0, m_fs / 2.0);
+          // ImPlot::SetupAxisLimits(ImAxis_Y1, 1e-6, 10.0);
+          ImPlot::PlotLine("", data.data(), static_cast<int>(data.size()));
+
+          ImPlot::EndPlot();
+        }
+        ImGui::EndTabItem();
+      }
+      ImGui::EndTabBar();
     }
   }
 
