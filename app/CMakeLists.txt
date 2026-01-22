@@ -13,15 +13,14 @@ add_executable(nodex_gui
     ${CMAKE_SOURCE_DIR}/external/imgui/backends/imgui_impl_glfw.cpp
     ${CMAKE_SOURCE_DIR}/external/implot/implot.cpp
     ${CMAKE_SOURCE_DIR}/external/implot/implot_items.cpp
-    ${CMAKE_SOURCE_DIR}/external/ImNodeFlow/src/ImNodeFlow.cpp
 )
 
 target_include_directories(nodex_gui
+   PRIVATE ./include
    PRIVATE ${CMAKE_SOURCE_DIR}/external/glad/include
    PRIVATE ${CMAKE_SOURCE_DIR}/external/imgui
    PRIVATE ${CMAKE_SOURCE_DIR}/external/imgui/backends
    PRIVATE ${CMAKE_SOURCE_DIR}/external/implot
-   PRIVATE ${CMAKE_SOURCE_DIR}/external/ImNodeFlow/include
 )
 
 target_link_libraries(nodex_gui PRIVATE

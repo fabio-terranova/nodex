@@ -15,6 +15,3 @@
 [submodule "external/implot"]
 	path = external/implot
 	url = https://github.com/epezent/implot
-[submodule "external/ImNodeFlow"]
-	path = external/ImNodeFlow
-	url = https://github.com/Fattorino/ImNodeFlow

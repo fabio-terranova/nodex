@@ -1,13 +1,12 @@
 #include "Core.h"
 #include "Filter.h"
 #include "FilterEigen.h"
-#include "ImNodeFlow.h"
+#include "NodeGraphWindow.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "implot.h"
 #include <Eigen/Dense>
-#include <complex>
 #include <cstddef>
 #include <vector>
 // clang-format off
@@ -15,7 +14,6 @@
 #include <GLFW/glfw3.h>
 // clang-format on
 #include <iostream>
-#include <string>
 
 using Nodex::Filter::Signal;
 
@@ -26,240 +24,6 @@ bool SliderDouble(const char* label, double* v, double v_min, double v_max,
                       flags);
 }
 } // namespace ImGui
-
-class DataViewerNode : public ImFlow::BaseNode {
-public:
-  DataViewerNode() {
-    setTitle("Data viewer");
-    setStyle(ImFlow::NodeStyle::green());
-    ImFlow::BaseNode::addIN<Signal>(">", Signal{},
-                                    ImFlow::ConnectionFilter::SameType());
-  }
-
-  void draw() override {
-    ImGui::SetNextItemWidth(100.f);
-    if (ImPlot::BeginPlot("", ImVec2(300, 200))) {
-      ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_AutoFit,
-                        ImPlotAxisFlags_AutoFit);
-      ImPlot::PlotLine("", getInVal<Signal>(">").data(),
-                       static_cast<int>(getInVal<Signal>(">").size()));
-
-      ImPlot::EndPlot();
-    }
-  }
-
-private:
-};
-
-class DataNode : public ImFlow::BaseNode {
-public:
-  DataNode() {
-    setTitle("Data");
-    setStyle(ImFlow::NodeStyle::green());
-    ImFlow::BaseNode::addOUT<Signal>(">", nullptr)->behaviour([this]() {
-      return data_;
-    });
-  }
-
-  void draw() override {
-    ImGui::Text("Samples: %d", static_cast<int>(data_.size()));
-  }
-
-  void setData(const Signal& data) { data_ = data; };
-
-private:
-  Signal data_{};
-};
-
-class FilterNode : public ImFlow::BaseNode {
-public:
-  FilterNode() {
-    setTitle("Filter");
-    setStyle(ImFlow::NodeStyle::brown());
-    ImFlow::BaseNode::addIN<Signal>(">", Signal(),
-                                    ImFlow::ConnectionFilter::SameType());
-    ImFlow::BaseNode::addOUT<Signal>(">", nullptr)->behaviour([this]() {
-      auto zpk{Nodex::Filter::iirFilter(m_order, m_fc, m_fs, m_filterType,
-                                        m_filterMode, m_param)};
-      auto filter{Nodex::Filter::zpk2tf(zpk)};
-
-      return Nodex::Filter::linearFilter(filter, getInVal<Signal>(">"));
-    });
-  }
-
-  void draw() override {
-    float itemsWidth{150.0f};
-    ImGui::SetNextItemWidth(itemsWidth);
-    bool needsUpdate{true};
-    // ImGui::SetNextItemWidth(itemsWidth);
-    // Filter type dropdown
-    static const char* filterTypes[] = {"Butterworth", "Cheby1", "Cheby2"};
-    int                filterTypeIdx = static_cast<int>(m_filterType);
-    if (ImGui::Combo("Type", &filterTypeIdx, filterTypes, 3)) {
-      m_filterType = static_cast<Nodex::Filter::Type>(filterTypeIdx);
-      needsUpdate  = true;
-    }
-
-    ImGui::SetNextItemWidth(itemsWidth);
-    // Filter mode dropdown
-    static const char* filterModes[] = {"Lowpass", "Highpass"};
-    int                filterModeIdx = static_cast<int>(m_filterMode);
-    if (ImGui::Combo("Mode", &filterModeIdx, filterModes, 2)) {
-      m_filterMode = static_cast<Nodex::Filter::Mode>(filterModeIdx);
-      needsUpdate  = true;
-    }
-
-    ImGui::SetNextItemWidth(itemsWidth);
-    // Filter order slider
-    if (ImGui::SliderInt("Order", &m_order, 1, 8))
-      needsUpdate = true;
-
-    ImGui::SetNextItemWidth(itemsWidth);
-    // Cutoff frequency slider
-    if (ImGui::SliderDouble("fc (Hz)", &m_fc, 0.1,
-                            m_fs / 2 - std::numeric_limits<double>::epsilon(),
-                            "%.2f"))
-      needsUpdate = true;
-
-    ImGui::SetNextItemWidth(itemsWidth);
-    // Sampling frequency slider
-    if (ImGui::InputDouble("fs (Hz)", &m_fs, 0.1, 1e6, "%.2f",
-                           ImGuiInputTextFlags_AutoSelectAll |
-                               ImGuiInputTextFlags_CharsScientific))
-      needsUpdate = true;
-
-    ImGui::SetNextItemWidth(itemsWidth);
-    // Ripple controls for Chebyshev filters
-    if (m_filterType == Nodex::Filter::cheb1) {
-      ImGui::SliderDouble("Passband ripple (dB)", &m_param, 0.1, 12.0, "%.2f");
-      needsUpdate = true;
-    } else if (m_filterType == Nodex::Filter::cheb2) {
-      ImGui::SliderDouble("Stopband attenuation (dB)", &m_param, 0.1, 80.0,
-                          "%.2f");
-      needsUpdate = true;
-    }
-
-    ImGui::SetNextItemWidth(itemsWidth);
-    if (ImGui::BeginTabBar("Frequency response") || needsUpdate) {
-      Nodex::Filter::ZPK zpk{Nodex::Filter::iirFilter(
-          m_order, m_fc, m_fs, m_filterType, m_filterMode, m_param)};
-
-      std::vector<double> w{};
-      // Frequency vector from 0 to fs/2, log spaced
-      std::size_t nPoints{512};
-      w.reserve(nPoints);
-      double logMin{std::log10(1.0)};
-      double logMax{std::log10(m_fs / 2.0)};
-      for (std::size_t i{0}; i < nPoints; ++i) {
-        double exponent{logMin + (logMax - logMin) * static_cast<double>(i) /
-                                     static_cast<double>(nPoints - 1)};
-        w.push_back(std::pow(10.0, exponent));
-      }
-      needsUpdate = false;
-
-      const std::vector<std::complex<double>> h{Nodex::Filter::freqz(zpk, w)};
-      Eigen::Map<const Eigen::ArrayXcd>       hMap{
-          h.data(), static_cast<Eigen::Index>(h.size())};
-
-      if (ImGui::BeginTabItem("Magnitude")) {
-        if (ImPlot::BeginPlot("Magnitude plot", ImVec2(300, 200)) ||
-            needsUpdate) {
-
-          // Magnitude of the filter response
-          Eigen::ArrayXd data{(20 * hMap.abs().log10())};
-
-          ImPlot::SetupAxes("Frequency (Hz)", "Magnitude", 0,
-                            ImPlotAxisFlags_AutoFit);
-          ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
-          // ImPlot::SetupAxisScale(ImAxis_Y1, ImPlotScale_Log10);
-          ImPlot::SetupAxisLimits(ImAxis_X1, 1.0, m_fs / 2.0);
-          // ImPlot::SetupAxisLimits(ImAxis_Y1, 1e-6, 10.0);
-          ImPlot::PlotLine("", data.data(), static_cast<int>(data.size()));
-
-          // draw cutoff frequency line
-          if (ImPlot::DragLineX(1234, &m_fc, ImVec4(1.0f, 0.0f, 0.0f, 1.0f)))
-            needsUpdate = true;
-
-          ImPlot::EndPlot();
-        }
-        ImGui::EndTabItem();
-      }
-      if (ImGui::BeginTabItem("Phase")) {
-        if (ImPlot::BeginPlot("Phase plot", ImVec2(300, 200)) || needsUpdate) {
-          Eigen::ArrayXd data{(hMap.arg())};
-
-          ImPlot::SetupAxes("Frequency (Hz)", "Phase", 0,
-                            ImPlotAxisFlags_AutoFit);
-          ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
-          // ImPlot::SetupAxisScale(ImAxis_Y1, ImPlotScale_Log10);
-          ImPlot::SetupAxisLimits(ImAxis_X1, 1.0, m_fs / 2.0);
-          // ImPlot::SetupAxisLimits(ImAxis_Y1, 1e-6, 10.0);
-          ImPlot::PlotLine("", data.data(), static_cast<int>(data.size()));
-
-          ImPlot::EndPlot();
-        }
-        ImGui::EndTabItem();
-      }
-      ImGui::EndTabBar();
-    }
-  }
-
-  void setFrequency(double fc) { m_fc = fc; }
-  void setOrder(int order) { m_order = order; }
-  void setParam(double param) { m_param = param; }
-  void setType(Nodex::Filter::Type type) { m_filterType = type; }
-  void setMode(Nodex::Filter::Mode mode) { m_filterMode = mode; }
-
-private:
-  double              m_fs{10000.0};
-  int                 m_order{2};
-  double              m_fc{100.0};
-  double              m_param{5.0f}; // Used for Chebyshev filters
-  Nodex::Filter::Type m_filterType{Nodex::Filter::butter};
-  Nodex::Filter::Mode m_filterMode{Nodex::Filter::lowpass};
-};
-
-/* Node editor that sets up the grid to place nodes */
-struct NodeEditor : ImFlow::BaseNode {
-  ImFlow::ImNodeFlow mINF;
-
-  NodeEditor() : BaseNode() {
-    mINF.getGrid().config().zoom_enabled = true;
-
-    auto dataNode{mINF.addNode<DataNode>({50, 50})};
-
-    auto n1{mINF.addNode<DataViewerNode>({250, 150})};
-    auto nf1{mINF.addNode<FilterNode>({550, 100})};
-    auto nf2{mINF.addNode<FilterNode>({550, 500})};
-    nf1->setFrequency(50.0f);
-    nf2->setFrequency(150.0);
-    nf2->setMode(Nodex::Filter::highpass);
-    nf2->setType(Nodex::Filter::cheb2);
-
-    auto n2{mINF.addNode<DataViewerNode>({950, 50})};
-    auto n3{mINF.addNode<DataViewerNode>({950, 300})};
-
-    // Sample data
-    Signal y(1000);
-    // Gaussian noise between -1.0 and 1.0
-    std::generate(y.begin(), y.end(), []() {
-      return 2.0 *
-             (static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX) -
-              0.5);
-    });
-
-    dataNode.get()->setData(y);
-    dataNode->outPin(">")->createLink(n1->inPin(">"));
-    dataNode->outPin(">")->createLink(nf1->inPin(">"));
-    dataNode->outPin(">")->createLink(nf2->inPin(">"));
-    nf1->outPin(">")->createLink(n2->inPin(">"));
-    nf2->outPin(">")->createLink(n3->inPin(">"));
-  }
-
-  void set_size(ImVec2 d) { mINF.setSize(d); }
-
-  void draw() override { mINF.update(); }
-};
 
 void framebuffer_size_callback(GLFWwindow*, int, int);
 void processInput(GLFWwindow*);
@@ -284,6 +48,84 @@ void main() {
   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
 }
 )"};
+
+class DataNode : public Node {
+public:
+  DataNode(std::string_view name, const Eigen::ArrayXd& data)
+      : Node{name, "Data"}, m_data{data} {
+    addOutput<Eigen::ArrayXd>("Out", [this]() { return m_data; });
+  }
+
+private:
+  Eigen::ArrayXd m_data;
+};
+
+class DataViewerNode : public Node {
+public:
+  DataViewerNode(std::string_view name) : Node{name, "Data Viewer"} {
+    addInput<Eigen::ArrayXd>("In", Eigen::ArrayXd{});
+  }
+
+  void render() override {
+    auto data{inputValue<Eigen::ArrayXd>("In")};
+    if (data.size() > 0) {
+      if (ImPlot::BeginPlot("Data Plot")) {
+        ImPlot::PlotLine("", data.data(), static_cast<int>(data.size()));
+        ImPlot::EndPlot();
+      }
+    } else {
+      ImGui::Text("No data connected.");
+    }
+  }
+
+private:
+};
+
+class FilterNode : public Node {
+public:
+  FilterNode(std::string_view name) : Node{name, "Filter"} {
+    addInput<Eigen::ArrayXd>("In", Eigen::ArrayXd{});
+    addOutput<Eigen::ArrayXd>("Out", [this]() {
+      auto inputData{inputValue<Eigen::ArrayXd>("In")};
+      auto filterCoeffs{Nodex::Filter::iirFilter(m_filterOrder, m_cutoffFreq,
+                                                 m_samplingFreq, m_filterType,
+                                                 m_filterMode)};
+      Nodex::Filter::EigenCoeffs filter{};
+      filter = Nodex::Filter::zpk2tf(Nodex::Filter::EigenZPK(filterCoeffs));
+
+      return Nodex::Filter::linearFilter(filter, inputData);
+    });
+  }
+  
+  void render() override {
+    ImGui::Text("Filter Parameters:");
+    static const char* filterTypes[] = {"Butterworth", "Chebyshev I", "Chebyshev II"};
+    int                filterTypeIdx = static_cast<int>(m_filterType);
+    if (ImGui::Combo("Type", &filterTypeIdx, filterTypes, 3)) {
+      m_filterType = static_cast<Nodex::Filter::Type>(filterTypeIdx);
+    }
+    
+    static const char* filterModes[] = {"Lowpass", "Highpass"};
+    int                filterModeIdx = static_cast<int>(m_filterMode);
+    if (ImGui::Combo("Mode", &filterModeIdx, filterModes, 2)) {
+      m_filterMode = static_cast<Nodex::Filter::Mode>(filterModeIdx);
+    }
+
+    ImGui::SliderInt("Order", &m_filterOrder, 1, 10);
+    ImGui::SliderDouble("fc (Hz)", &m_cutoffFreq, 1.0, m_samplingFreq / 2, "%.1f");
+    ImGui::SliderDouble("fs (Hz)", &m_samplingFreq, 10.0, 10000.0, "%.1f");
+  }
+
+
+private:
+  Nodex::Filter::Mode m_filterMode{};
+  Nodex::Filter::Type m_filterType{};
+  int                 m_filterOrder{2};
+  double              m_cutoffFreq{100.0};
+  double              m_samplingFreq{1000.0};
+};
+
+Eigen::ArrayXd randomData{Eigen::ArrayXd::Random(1000)};
 
 int main(void) {
   std::cout << "Nodex::Core v" << Nodex::Core::version() << "\n";
@@ -438,9 +280,17 @@ int main(void) {
     yf[i] = linearFilter(filter, y);
   }
 
-  // Create a node editor with width and height
-  NodeEditor* nodeEditor     = new (NodeEditor)();
-  const auto  nodeEditorSize = ImVec2(1400, 600);
+  NodeGraph graph;
+  auto      dataNode{graph.createNode<DataNode>("Data", randomData)};
+  auto      filterNode{graph.createNode<FilterNode>("Filter 1")};
+  auto      dataViewerNode{graph.createNode<DataViewerNode>("View 1")};
+  auto      dataViewerNode2{graph.createNode<DataViewerNode>("View 2")};
+  filterNode->input<Eigen::ArrayXd>("In")->connect(
+      dataNode->output<Eigen::ArrayXd>("Out"));
+  dataViewerNode->input<Eigen::ArrayXd>("In")->connect(
+      filterNode->output<Eigen::ArrayXd>("Out"));
+  dataViewerNode2->input<Eigen::ArrayXd>("In")->connect(
+      dataNode->output<Eigen::ArrayXd>("Out"));
 
   // Main loop
   while (!glfwWindowShouldClose(window)) {
@@ -458,44 +308,8 @@ int main(void) {
     glBindVertexArray(VAO);
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
-    // Sample window
-    const auto window_size      = io.DisplaySize - ImVec2(1, 1);
-    const auto window_pos       = ImVec2(1, 1);
-    const auto node_editor_size = window_size - ImVec2(16, 16);
-    ImGui::SetNextWindowSize(window_size);
-    ImGui::SetNextWindowPos(window_pos);
-    {
-      ImGui::Begin("Node Editor", nullptr,
-                   ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
-                       ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
-      nodeEditor->set_size(node_editor_size);
-      nodeEditor->draw();
-      ImGui::End();
-    }
-
-    {
-      // ImGui::Begin("Simple window");
-      // ImGui::Text("FPS: %0.3f", ImGui::GetIO().Framerate);
-      //
-      // if (ImPlot::BeginPlot("Data plot")) {
-      //   ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations,
-      //                     ImPlotAxisFlags_NoDecorations |
-      //                         ImPlotAxisFlags_AutoFit);
-      //   ImPlot::PlotLine("Raw", y.data(), static_cast<int>(y.size()));
-      //
-      //   for (std::size_t i{0}; i < 4; ++i) {
-      //     std::string fString{"Filtered (fc = " + std::to_string(100 - 25 *
-      //     i) +
-      //                         " Hz)"};
-      //     ImPlot::PlotLine(fString.c_str(), yf[i].data(),
-      //                      static_cast<int>(yf[i].size()));
-      //   }
-      //   ImPlot::EndPlot();
-      // }
-      // ImGui::End();
-    }
-
-    // ImGui::ShowStackToolWindow();
+    // Node editor
+    NodeGraphWindow(graph);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
