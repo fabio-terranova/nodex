@@ -49,11 +49,31 @@ void main() {
 }
 )"};
 
+class AdderNode : public Node {
+public:
+  AdderNode(std::string_view name) : Node{name, "Adder"} {
+    addInput<Eigen::ArrayXd>("In 1", Eigen::ArrayXd{});
+    addInput<Eigen::ArrayXd>("In 2", Eigen::ArrayXd{});
+    addOutput<Eigen::ArrayXd>("Out", [this]() {
+      return inputValue<Eigen::ArrayXd>("In 1") +
+             inputValue<Eigen::ArrayXd>("In 2");
+    });
+  }
+
+  void render() override { ImGui::Text("Adder node"); }
+
+private:
+};
+
 class DataNode : public Node {
 public:
   DataNode(std::string_view name, const Eigen::ArrayXd& data)
       : Node{name, "Data"}, m_data{data} {
     addOutput<Eigen::ArrayXd>("Out", [this]() { return m_data; });
+  }
+
+  void render() override {
+    ImGui::Text("%d samples", static_cast<int>(m_data.size()));
   }
 
 private:
@@ -69,7 +89,7 @@ public:
   void render() override {
     auto data{inputValue<Eigen::ArrayXd>("In")};
     if (data.size() > 0) {
-      if (ImPlot::BeginPlot("Data Plot")) {
+      if (ImPlot::BeginPlot("Time plot", ImVec2{200.0f, 150.0f})) {
         ImPlot::PlotLine("", data.data(), static_cast<int>(data.size()));
         ImPlot::EndPlot();
       }
@@ -96,15 +116,16 @@ public:
       return Nodex::Filter::linearFilter(filter, inputData);
     });
   }
-  
+
   void render() override {
     ImGui::Text("Filter Parameters:");
-    static const char* filterTypes[] = {"Butterworth", "Chebyshev I", "Chebyshev II"};
+    static const char* filterTypes[] = {"Butterworth", "Chebyshev I",
+                                        "Chebyshev II"};
     int                filterTypeIdx = static_cast<int>(m_filterType);
     if (ImGui::Combo("Type", &filterTypeIdx, filterTypes, 3)) {
       m_filterType = static_cast<Nodex::Filter::Type>(filterTypeIdx);
     }
-    
+
     static const char* filterModes[] = {"Lowpass", "Highpass"};
     int                filterModeIdx = static_cast<int>(m_filterMode);
     if (ImGui::Combo("Mode", &filterModeIdx, filterModes, 2)) {
@@ -112,10 +133,10 @@ public:
     }
 
     ImGui::SliderInt("Order", &m_filterOrder, 1, 10);
-    ImGui::SliderDouble("fc (Hz)", &m_cutoffFreq, 1.0, m_samplingFreq / 2, "%.1f");
+    ImGui::SliderDouble("fc (Hz)", &m_cutoffFreq, 1.0, m_samplingFreq / 2,
+                        "%.1f");
     ImGui::SliderDouble("fs (Hz)", &m_samplingFreq, 10.0, 10000.0, "%.1f");
   }
-
 
 private:
   Nodex::Filter::Mode m_filterMode{};
@@ -280,17 +301,32 @@ int main(void) {
     yf[i] = linearFilter(filter, y);
   }
 
+  // Make sinusoidal data frequency of 5 Hz
+  // Amplitude of 1.0, sampled at 1000 Hz for 1 second
+  Eigen::ArrayXd sinData = Eigen::sin(Eigen::ArrayXd::LinSpaced(
+      1000, 0.0, 2.0 * M_PI * 5.0 * (999.0 / 1000.0)));
+
   NodeGraph graph;
-  auto      dataNode{graph.createNode<DataNode>("Data", randomData)};
+  auto      dataNode{graph.createNode<DataNode>("Data 1", randomData)};
   auto      filterNode{graph.createNode<FilterNode>("Filter 1")};
+  auto      dataNode2{graph.createNode<DataNode>("Data 2", sinData)};
   auto      dataViewerNode{graph.createNode<DataViewerNode>("View 1")};
   auto      dataViewerNode2{graph.createNode<DataViewerNode>("View 2")};
+  auto      dataViewerNode3{graph.createNode<DataViewerNode>("View 3")};
+  auto      adderNode{graph.createNode<AdderNode>("Adder")};
+
   filterNode->input<Eigen::ArrayXd>("In")->connect(
       dataNode->output<Eigen::ArrayXd>("Out"));
   dataViewerNode->input<Eigen::ArrayXd>("In")->connect(
       filterNode->output<Eigen::ArrayXd>("Out"));
+  adderNode->input<Eigen::ArrayXd>("In 1")->connect(
+      filterNode->output<Eigen::ArrayXd>("Out"));
+  adderNode->input<Eigen::ArrayXd>("In 2")->connect(
+      dataNode2->output<Eigen::ArrayXd>("Out"));
   dataViewerNode2->input<Eigen::ArrayXd>("In")->connect(
-      dataNode->output<Eigen::ArrayXd>("Out"));
+      adderNode->output<Eigen::ArrayXd>("Out"));
+  dataViewerNode3->input<Eigen::ArrayXd>("In")->connect(
+      dataNode2->output<Eigen::ArrayXd>("Out"));
 
   // Main loop
   while (!glfwWindowShouldClose(window)) {

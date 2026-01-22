@@ -1,7 +1,5 @@
-
 #include "Node.h"
 #include "imgui.h"
-#include "imgui_internal.h"
 #include <unordered_map>
 
 inline void NodeGraphWindow(NodeGraph& graph) {
@@ -9,14 +7,14 @@ inline void NodeGraphWindow(NodeGraph& graph) {
 
   std::unordered_map<const Port*, ImVec2> portPositions;
 
-  // Iterate through nodes and render them
   for (auto& node : graph.getNodes()) {
     // create a simple window for each node
     // the identifier/label is node label plus its unique ID to avoid conflicts
     std::string winIdentifier{node->label()};
     winIdentifier += "##";
     winIdentifier += std::to_string(node->id());
-    ImGui::Begin(winIdentifier.c_str(), nullptr, 0);
+    ImGui::Begin(winIdentifier.c_str(), nullptr,
+                 ImGuiWindowFlags_AlwaysAutoResize);
 
     // Inputs in left column, outputs in right column
     ImGui::Columns(2, nullptr, false);
@@ -41,47 +39,15 @@ inline void NodeGraphWindow(NodeGraph& graph) {
     ImGui::Columns(1);
     ImGui::Separator();
 
-    // auto n{std::max(node->inputNames().size(), node->outputNames().size())};
-    // for (std::size_t i = 0; i < n; ++i) {
-    //   // Input ports
-    //   ImGui::BeginGroup();
-    //   if (i < node->inputNames().size()) {
-    //     auto inputName{node->inputNames()[i]};
-    //     ImGui::Text("%s", inputName.data());
-    //     // get last item position
-    //     auto pos = ImGui::GetItemRectMin() +
-    //                ImVec2{0.0f, ImGui::GetTextLineHeight() / 2};
-    //     portPositions[node->inputPort(inputName)] = pos;
-    //   } else {
-    //     ImGui::Text("");
-    //   }
-    //   ImGui::EndGroup();
-
-    //   // Output ports
-    //   ImGui::SameLine(100.0f);
-    //   if (i < node->outputNames().size()) {
-    //     auto outputName{node->outputNames()[i]};
-    //     ImGui::Text("%s", outputName.data());
-    //     auto pos = ImGui::GetItemRectMin() + ImGui::GetItemRectSize() -
-    //                ImVec2{0.0f, ImGui::GetTextLineHeight() / 2};
-    //     portPositions[node->outputPort(outputName)] = pos;
-    //   } else {
-    //     ImGui::Text("");
-    //   }
-
-    //   ImGui::NewLine();
-    // }
-
     // Render node-specific UI
     node->render();
 
     ImGui::End();
   }
 
-  ImDrawList* drawList = ImGui::GetForegroundDrawList();
-  // nice flashy red color for the links
-  const ImU32 linkColor     = IM_COL32(255, 100, 100, 255);
-  const float linkThickness = 3.0f;
+  ImDrawList* drawList      = ImGui::GetForegroundDrawList();
+  const ImU32 linkColor     = IM_COL32(255, 100, 100, 255); // flashy red
+  const float linkThickness = 2.0f;
 
   for (auto& node : graph.getNodes()) {
     for (auto& inputName : node->inputNames()) {
