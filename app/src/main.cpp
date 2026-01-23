@@ -184,81 +184,6 @@ int main(void) {
 
   glViewport(0, 0, 800, 600);
 
-  float vertices[]{
-      -0.5f, -0.5f, 0.0f, //
-      0.5f,  -0.5f, 0.0f, //
-      0.0f,  0.5f,  0.0f  //
-  };
-
-  // Vertex shader
-  GLuint vertexShader{glCreateShader(GL_VERTEX_SHADER)};
-  glShaderSource(vertexShader, 1, &vertexShaderSource, nullptr);
-  glCompileShader(vertexShader);
-
-  // Log variables
-  int  success{};
-  char infoLog[512];
-
-  // Check if vertex shader got compiled
-  glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-  if (!success) {
-    glGetShaderInfoLog(vertexShader, 512, nullptr, infoLog);
-
-    std::cerr << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n"
-              << infoLog << "\n";
-  }
-
-  // Fragment shader
-  GLuint fragmentShader{glCreateShader(GL_FRAGMENT_SHADER)};
-  glShaderSource(fragmentShader, 1, &fragmentShaderSource, nullptr);
-  glCompileShader(fragmentShader);
-  // check compilation
-  glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-  if (!success) {
-    glGetShaderInfoLog(fragmentShader, 512, nullptr, infoLog);
-    std::cerr << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n"
-              << infoLog << "\n";
-  }
-
-  // Shader program
-  GLuint shaderProgram;
-  shaderProgram = glCreateProgram();
-  glAttachShader(shaderProgram, vertexShader);
-  glAttachShader(shaderProgram, fragmentShader);
-  glLinkProgram(shaderProgram);
-  // check linking
-  glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-  if (!success) {
-    glGetShaderInfoLog(shaderProgram, 512, nullptr, infoLog);
-    std::cerr << "ERROR::SHADER::PROGRAM::LINK_FAILED\n" << infoLog << "\n";
-  }
-  // delete shader objects
-  glDeleteShader(vertexShader);
-  glDeleteShader(fragmentShader);
-
-  // vertex buffer object
-  GLuint VBO{};
-  GLuint VAO{};
-
-  glGenVertexArrays(1, &VAO);
-  glGenBuffers(1, &VBO);
-
-  // bind vertex array object
-  glBindVertexArray(VAO);
-
-  // copy vertices in a buffer
-  glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-  // set vertex attributes pointers
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-  glEnableVertexAttribArray(0);
-
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-  // Unbind the VAO so other VAO calls won't accidentally modify this VAO.
-  glBindVertexArray(0);
-
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImPlot::CreateContext();
@@ -275,31 +200,6 @@ int main(void) {
 
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init("#version 330 core");
-
-  // Sample data
-  Eigen::ArrayXd y(1000);
-  // Gaussian noise between -1.0 and 1.0
-  std::generate(y.data(), y.data() + y.size(), []() {
-    return 2.0 *
-           (static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX) -
-            0.5);
-  });
-
-  int    filterOrder{2};
-  double fs{1000.0};
-  double fc{100.0}; // starting cutoff freq
-
-  std::vector<Eigen::ArrayXd> yf(4);
-  for (std::size_t i{0}; i < 4; ++i) {
-    Nodex::Filter::ZPK digitalFilter{
-        Nodex::Filter::iirFilter<Nodex::Filter::buttap, Nodex::Filter::lowpass>(
-            filterOrder, fc - 25 * i, fs)};
-
-    Nodex::Filter::EigenCoeffs filter{};
-    filter = Nodex::Filter::zpk2tf(Nodex::Filter::EigenZPK(digitalFilter));
-
-    yf[i] = linearFilter(filter, y);
-  }
 
   // Make sinusoidal data frequency of 5 Hz
   // Amplitude of 1.0, sampled at 1000 Hz for 1 second
@@ -339,11 +239,6 @@ int main(void) {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    // draw the object
-    glUseProgram(shaderProgram);
-    glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-
     // Node editor
     NodeGraphWindow(graph);
 
@@ -357,12 +252,8 @@ int main(void) {
 
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplGlfw_Shutdown();
+  ImPlot::DestroyContext();
   ImGui::DestroyContext();
-
-  // optional: deallocate resources once outlived their purpose.
-  glDeleteVertexArrays(1, &VAO);
-  glDeleteBuffers(1, &VBO);
-  glDeleteProgram(shaderProgram);
 
   glfwTerminate();
   return 0;
