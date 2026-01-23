@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cwchar>
 #include <functional>
+#include <map>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -21,6 +22,9 @@ using SharedPtr = std::shared_ptr<T>;
 
 template <typename T>
 using WeakPtr = std::weak_ptr<T>;
+
+template <typename Key, typename Value>
+using Map = std::map<Key, Value>;
 
 template <typename Key, typename Value>
 using UnorderedMap = std::unordered_map<Key, Value>;
@@ -83,7 +87,8 @@ private:
 
 class Node {
 public:
-  explicit Node(std::string_view name, std::string_view label) : m_name{name}, m_label{label} {}
+  explicit Node(std::string_view name, std::string_view label)
+      : m_name{name}, m_label{label} {}
   virtual ~Node() = default;
 
   std::string_view name() const { return m_name; }
@@ -157,7 +162,7 @@ public:
   NodeID id() const { return m_id; }
 
   void setID(NodeID id) { m_id = id; }
-  
+
   std::string_view label() const { return m_label; }
 
   virtual void render() {}
@@ -167,9 +172,9 @@ protected:
   std::string m_label{"Node"};
   NodeGraph*  m_graph{};
 
-  UnorderedMap<std::string_view, UniquePtr<Port>> m_inputs;
-  UnorderedMap<std::string_view, UniquePtr<Port>> m_outputs;
-  
+  Map<std::string_view, UniquePtr<Port>> m_inputs;
+  Map<std::string_view, UniquePtr<Port>> m_outputs;
+
   NodeID m_id{};
 };
 
@@ -200,7 +205,7 @@ private:
   UnorderedMap<std::string_view, SharedPtr<Node>> m_nodes;
 
   std::size_t m_frame{1};
-  NodeID     m_nextNodeID{0};
+  NodeID      m_nextNodeID{0};
 };
 
 template <typename T>
