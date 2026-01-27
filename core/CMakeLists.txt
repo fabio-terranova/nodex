@@ -3,6 +3,7 @@ add_library(nodex_core SHARED
   ./src/Core.cpp
   ./src/Utils.cpp
   ./src/Filter.cpp
+  ./src/Node.cpp
 )
 
 target_include_directories(nodex_core PUBLIC include)
