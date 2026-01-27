@@ -2,6 +2,7 @@ find_package(OpenGL REQUIRED)
 
 add_executable(nodex_gui
     ./src/main.cpp
+    ./src/GuiNodes.cpp
     ${CMAKE_SOURCE_DIR}/external/glad/src/glad.c
     ${CMAKE_SOURCE_DIR}/external/imgui/imgui.cpp
     ${CMAKE_SOURCE_DIR}/external/imgui/imgui_demo.cpp

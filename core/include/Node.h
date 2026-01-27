@@ -1,88 +1,130 @@
-#include <algorithm>
-#include <cstddef>
-#include <cwchar>
-#include <functional>
-#include <map>
-#include <memory>
+#include "Core.h"
 #include <string>
 #include <string_view>
-#include <unordered_map>
 
+namespace Nodex::Core {
 using PortID = std::size_t;
 using NodeID = std::size_t;
 
-template <typename T>
-using Function = std::function<T>;
-
-template <typename T>
-using UniquePtr = std::unique_ptr<T>;
-
-template <typename T>
-using SharedPtr = std::shared_ptr<T>;
-
-template <typename T>
-using WeakPtr = std::weak_ptr<T>;
-
-template <typename Key, typename Value>
-using Map = std::map<Key, Value>;
-
-template <typename Key, typename Value>
-using UnorderedMap = std::unordered_map<Key, Value>;
-
 class Node;
-class NodeGraph;
+class Graph;
 
 class Port {
 public:
-  explicit Port(std::string_view name, NodeGraph* graph)
-      : m_name{name}, m_graph{graph} {}
+  explicit Port(std::string_view name, Node* node)
+      : m_name{name}, m_node{node} {}
   virtual ~Port() = default;
 
   std::string_view name() const { return m_name; }
 
-  void setGraph(NodeGraph* graph) { m_graph = graph; }
+  void setNode(Node* node) { m_node = node; }
+
+  virtual void connect(Port*) {}
+  virtual void disconnect(Port*) {}
+  virtual void disconnectAll() {}
 
   virtual Port* connected() const { return nullptr; }
+  virtual bool  connected(Port*) const { return false; }
 
 protected:
   std::string m_name;
-  NodeGraph*  m_graph{};
+  Node*       m_node{};
 };
+
+template <typename T>
+class InPort;
 
 template <typename T>
 class OutPort : public Port {
 public:
-  OutPort(std::string_view name, Function<T()> cb, NodeGraph* graph)
-      : Port{name, graph}, m_cb{std::move(cb)} {}
+  OutPort(std::string_view name, Function<T()> cb, Node* node)
+      : Port{name, node}, m_cb{std::move(cb)} {}
 
   const T& value();
 
-  void connect(Port* port) { port->connected() = this; }
+  void connect(Port* port) override {
+    auto inPort = dynamic_cast<InPort<T>*>(port);
+    if (!inPort)
+      return;
+
+    port->connect(this);
+  };
+
+  void disconnect(Port* port) override { port->disconnect(this); }
+
+  void disconnectAll() {
+    for (auto& inPort : m_connectedPorts) {
+      inPort->disconnect(this);
+    }
+  }
+
+  void addConnection(InPort<T>* port) { m_connectedPorts.emplace_back(port); }
+
+  void removeConnection(InPort<T>* port) {
+    auto it = std::find(m_connectedPorts.begin(), m_connectedPorts.end(), port);
+
+    if (it != m_connectedPorts.end()) {
+      m_connectedPorts.erase(it);
+    }
+  }
+
+  bool connected(Port* port) const override {
+    return std::find(m_connectedPorts.begin(), m_connectedPorts.end(), port) !=
+           m_connectedPorts.end();
+  }
 
 private:
-  Function<T()> m_cb;
-  T             m_value{};
-  std::size_t   m_lastEvalFrame{};
+  Function<T()>           m_cb;
+  T                       m_value{};
+  std::vector<InPort<T>*> m_connectedPorts{};
+  std::size_t             m_lastEvalFrame{0};
 };
 
 template <typename T>
 class InPort : public Port {
 public:
-  InPort(std::string_view name, T defaultValue, NodeGraph* graph)
-      : Port{name, graph}, m_value{std::move(defaultValue)} {}
+  InPort(std::string_view name, T defaultValue, Node* node)
+      : Port{name, node}, m_value{std::move(defaultValue)} {}
 
   const T& value() const {
-    return m_connected ? dynamic_cast<OutPort<T>*>(m_connected)->value()
-                       : m_value;
+    return m_connected ? m_connected->value() : m_value;
   }
 
-  void connect(Port* port) { m_connected = port; }
+  Port* connected() const override { return m_connected; }
+  bool  connected(Port* port) const override { return m_connected == port; }
 
-  Port* connected() const { return m_connected; }
+  void connect(Port* port) override {
+    auto outPort = dynamic_cast<OutPort<T>*>(port);
+    if (!outPort)
+      return;
+
+    if (m_connected && m_connected != outPort) {
+      m_connected->disconnect(this);
+    }
+
+    if (m_connected == outPort)
+      return; // already connected
+
+    m_connected = outPort;
+    outPort->addConnection(dynamic_cast<InPort<T>*>(this));
+  }
+
+  void disconnect(Port* port) override {
+    auto outPort = dynamic_cast<OutPort<T>*>(port);
+    if (!outPort)
+      throw std::runtime_error(
+          "InPort can only disconnect from OutPort of same type");
+
+    if (m_connected != outPort)
+      throw std::runtime_error("Ports are not connected");
+
+    m_connected = nullptr;
+    outPort->removeConnection(dynamic_cast<InPort<T>*>(this));
+  }
 
 private:
-  Port* m_connected{};
-  T     m_value{};
+  OutPort<T>* m_connected{};
+  T           m_value{};
 };
 
 class Node {
@@ -96,7 +138,7 @@ public:
   template <typename T>
   InPort<T>* addInput(std::string_view name, T defaultValue) {
     auto port =
-        std::make_unique<InPort<T>>(name, std::move(defaultValue), m_graph);
+        std::make_unique<InPort<T>>(name, std::move(defaultValue), this);
     auto ptr = port.get();
     m_inputs.emplace(name, std::move(port));
     return ptr;
@@ -104,7 +146,7 @@ public:
 
   template <typename T>
   OutPort<T>* addOutput(std::string_view name, Function<T()> cb) {
-    auto port = std::make_unique<OutPort<T>>(name, std::move(cb), m_graph);
+    auto port = std::make_unique<OutPort<T>>(name, std::move(cb), this);
     auto ptr  = port.get();
     m_outputs.emplace(name, std::move(port));
     return ptr;
@@ -152,12 +194,9 @@ public:
     return names;
   }
 
-  void setGraph(NodeGraph* graph) {
-    m_graph = graph;
-    for (auto& [_, port] : m_outputs) {
-      port.get()->setGraph(graph);
-    }
-  }
+  Graph* graph() const { return m_graph; }
+
+  void setGraph(Graph* graph) { m_graph = graph; }
 
   NodeID id() const { return m_id; }
 
@@ -170,7 +209,7 @@ public:
 protected:
   std::string m_name;
   std::string m_label{"Node"};
-  NodeGraph*  m_graph{};
+  Graph*      m_graph{};
 
   Map<std::string_view, UniquePtr<Port>> m_inputs;
   Map<std::string_view, UniquePtr<Port>> m_outputs;
@@ -178,7 +217,7 @@ protected:
   NodeID m_id{};
 };
 
-class NodeGraph {
+class Graph {
 public:
   template <typename T, typename... Args>
   T* createNode(Args&&... args) {
@@ -198,8 +237,34 @@ public:
     return nodes;
   }
 
+  void removeNode(std::string_view name) {
+    auto it = m_nodes.find(name);
+    if (it == m_nodes.end())
+      throw std::runtime_error("Node not found");
+
+    // Disconnect all ports
+    for (const auto& outputName : it->second->outputNames()) {
+      auto outPort = it->second->outputPort(outputName);
+      outPort->disconnectAll();
+    }
+
+    for (const auto& inputName : it->second->inputNames()) {
+      auto inPort        = it->second->inputPort(inputName);
+      auto connectedPort = inPort->connected();
+      if (connectedPort) {
+        inPort->disconnect(connectedPort);
+      }
+    }
+
+    m_nodes.erase(it);
+
+    m_nextNodeID--;
+  }
+
   std::size_t frame() const { return m_frame; }
   void        update() { ++m_frame; }
+
+  NodeID numberOfNodes() const { return m_nextNodeID; }
 
 private:
   UnorderedMap<std::string_view, SharedPtr<Node>> m_nodes;
@@ -210,13 +275,16 @@ private:
 
 template <typename T>
 const T& OutPort<T>::value() {
-  if (!m_graph)
+  Graph* graph = m_node ? m_node->graph() : nullptr;
+
+  if (!graph)
     throw std::runtime_error("OutPort has no graph");
 
-  if (m_lastEvalFrame != m_graph->frame()) {
-    m_lastEvalFrame = m_graph->frame();
+  if (m_lastEvalFrame != graph->frame()) {
+    m_lastEvalFrame = graph->frame();
     m_value         = m_cb();
   }
 
   return m_value;
 }
+} // namespace Nodex::Core
