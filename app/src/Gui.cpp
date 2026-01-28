@@ -5,7 +5,7 @@
 #include "imgui.h"
 #include "implot.h"
 #include "nfd.hpp"
-#include "nlohmann/json_fwd.hpp"
+#include "nlohmann/json.hpp"
 #include <fstream>
 #include <iostream>
 #include <string>

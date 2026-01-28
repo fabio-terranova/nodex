@@ -128,6 +128,72 @@ Core::Graph loadFromJson(const std::string& jsonString) {
       it->second(graph, nodeName, params);
     }
 
+    // Second pass: Restore connections between nodes
+    for (const auto& nodeJson : j["nodes"]) {
+      std::string nodeName = nodeJson["name"].get<std::string>();
+      auto nodes = graph.getNodes();
+      Core::Node* sourceNode = nullptr;
+
+      // Find the source node
+      for (auto& node : nodes) {
+        if (node->name() == nodeName) {
+          sourceNode = node.get();
+          break;
+        }
+      }
+
+      if (!sourceNode) {
+        throw std::runtime_error("Node not found after creation: " + nodeName);
+      }
+
+      // Process outputs to restore connections
+      if (nodeJson.contains("outputs")) {
+        for (const auto& outputJson : nodeJson["outputs"]) {
+          if (!outputJson.contains("name") || !outputJson.contains("connections")) {
+            continue;
+          }
+
+          std::string outputName = outputJson["name"].get<std::string>();
+          Core::Port* sourcePort = sourceNode->outputPort(outputName);
+
+          if (!sourcePort) {
+            throw std::runtime_error("Output port not found: " + outputName);
+          }
+
+          // Connect to all target ports
+          for (const auto& connJson : outputJson["connections"]) {
+            if (!connJson.contains("node") || !connJson.contains("port")) {
+              continue;
+            }
+
+            std::string targetNodeName = connJson["node"].get<std::string>();
+            std::string targetPortName = connJson["port"].get<std::string>();
+
+            // Find target node
+            Core::Node* targetNode = nullptr;
+            for (auto& node : nodes) {
+              if (node->name() == targetNodeName) {
+                targetNode = node.get();
+                break;
+              }
+            }
+
+            if (!targetNode) {
+              throw std::runtime_error("Target node not found: " + targetNodeName);
+            }
+
+            Core::Port* targetPort = targetNode->inputPort(targetPortName);
+            if (!targetPort) {
+              throw std::runtime_error("Target input port not found: " + targetPortName);
+            }
+
+            // Establish connection
+            targetPort->connect(sourcePort);
+          }
+        }
+      }
+    }
+
   } catch (const nlohmann::json::exception& e) {
     throw std::runtime_error(std::string("JSON parsing error: ") + e.what());
   }
