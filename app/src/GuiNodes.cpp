@@ -3,7 +3,10 @@
 #include "FilterEigen.h"
 #include "imgui.h"
 #include "implot.h"
+#include "nfd.h"
+#include "nfd.hpp"
 #include "nlohmann/json_fwd.hpp"
+#include <fstream>
 #include <iostream>
 #include <numbers>
 #include <string>
@@ -34,64 +37,42 @@ static std::string s_pendingMixerNodeName = {};
 
 Graph loadJson(const std::string& jsonString) {
   Graph          graph;
-  nlohmann::json j{nlohmann::json::parse(jsonString)};
+  nlohmann::json j = nlohmann::json::parse(jsonString);
+  std::cout << "Parsed JSON:\n" << j.dump(4) << "\n";
 
-  for (const auto& nodeArray : j["nodes"]) {
-    for (const auto& nodeJson : nodeArray) {
-      std::string nodeName = nodeJson["name"];
-      std::string nodeType = nodeJson["type"];
+  for (const auto& nodeJson : j["nodes"]) {
+    std::string nodeType = nodeJson["type"];
+    std::string nodeName = nodeJson["name"];
 
-      if (nodeType == "RandomDataNode") {
-        int size = nodeJson["parameters"]["samples"];
-        graph.createNode<RandomDataNode>(nodeName, size);
-      } else if (nodeType == "SineNode") {
-        int    size   = nodeJson["parameters"]["samples"];
-        double fs     = nodeJson["parameters"]["fs"];
-        double freq   = nodeJson["parameters"]["frequency"];
-        double amp    = nodeJson["parameters"]["amplitude"];
-        double phase  = nodeJson["parameters"]["phase"];
-        double offset = nodeJson["parameters"]["offset"];
-        graph.createNode<SineNode>(nodeName, size, freq, amp, phase, fs,
-                                   offset);
-      } else if (nodeType == "MixerNode") {
-        int                 numInputs = nodeJson["parameters"]["inputs"];
-        std::vector<double> gains =
-            nodeJson["parameters"]["gains"].get<std::vector<double>>();
-        graph.createNode<MixerNode>(nodeName, numInputs, gains);
-      } else if (nodeType == "FilterNode") {
-        Filter::Mode mode =
-            static_cast<Filter::Mode>(nodeJson["parameters"]["filter_mode"]);
-        Filter::Type type =
-            static_cast<Filter::Type>(nodeJson["parameters"]["filter_type"]);
-        int    order        = nodeJson["parameters"]["filter_order"];
-        double cutoffFreq   = nodeJson["parameters"]["cutoff_freq"];
-        double samplingFreq = nodeJson["parameters"]["sampling_freq"];
-        graph.createNode<FilterNode>(nodeName, mode, type, order, cutoffFreq,
-                                     samplingFreq);
-      } else if (nodeType == "ViewerNode") {
-        graph.createNode<ViewerNode>(nodeName);
-      }
-    }
-  }
-
-  for (const auto& nodeArray : j["nodes"]) {
-    for (const auto& nodeJson : nodeArray) {
-      std::string nodeName = nodeJson["name"];
-      auto        node     = graph.getNodesMap().at(nodeName);
-
-      for (const auto& inputJson : nodeJson["inputs"]) {
-        std::string inputName = inputJson["name"];
-        if (inputJson.contains("connection")) {
-          std::string connectedNodeName = inputJson["connection"]["node"];
-          std::string connectedPortName = inputJson["connection"]["port"];
-
-          auto connectedNode = graph.getNodesMap().at(connectedNodeName);
-          auto outPort       = connectedNode->outputPort(connectedPortName);
-          auto inPort        = node->inputPort(inputName);
-
-          inPort->connect(outPort);
-        }
-      }
+    if (nodeType == "RandomDataNode") {
+      int samples = nodeJson["parameters"]["samples"];
+      graph.createNode<RandomDataNode>(nodeName, samples);
+    } else if (nodeType == "SineNode") {
+      int    samples   = nodeJson["parameters"]["samples"];
+      double frequency = nodeJson["parameters"]["frequency"];
+      double amplitude = nodeJson["parameters"]["amplitude"];
+      double phase     = nodeJson["parameters"]["phase"];
+      double fs        = nodeJson["parameters"]["fs"];
+      double offset    = nodeJson["parameters"]["offset"];
+      graph.createNode<SineNode>(nodeName, samples, frequency, amplitude, phase,
+                                 fs, offset);
+    } else if (nodeType == "MixerNode") {
+      std::size_t         inputs = nodeJson["parameters"]["inputs"];
+      std::vector<double> gains =
+          nodeJson["parameters"]["gains"].get<std::vector<double>>();
+      graph.createNode<MixerNode>(nodeName, inputs, gains);
+    } else if (nodeType == "FilterNode") {
+      auto mode =
+          static_cast<Filter::Mode>(nodeJson["parameters"]["filter_mode"]);
+      auto type =
+          static_cast<Filter::Type>(nodeJson["parameters"]["filter_type"]);
+      int    order        = nodeJson["parameters"]["filter_order"];
+      double cutoffFreq   = nodeJson["parameters"]["cutoff_freq"];
+      double samplingFreq = nodeJson["parameters"]["sampling_freq"];
+      graph.createNode<FilterNode>(nodeName, mode, type, order, cutoffFreq,
+                                   samplingFreq);
+    } else if (nodeType == "ViewerNode") {
+      graph.createNode<ViewerNode>(nodeName);
     }
   }
 
@@ -302,9 +283,41 @@ void graphWindow(Graph& graph) {
       if (ImGui::MenuItem("Save")) {
         // TODO: implement save
         nlohmann::json j = graph.serialize();
-        std::cout << j.dump(2) << "\n";
+
+        NFD::UniquePath outPath;
+
+        nfdfilteritem_t filterItem[1] = {
+            {"JSON Files", "json"}
+        };
+        nfdresult_t result = NFD::SaveDialog(outPath, filterItem, 1, nullptr);
+        if (result == NFD_OKAY) {
+          try {
+            std::ofstream file{outPath.get()};
+            file << j.dump();
+          } catch (const std::exception& e) {
+            std::cerr << "Error saving JSON: " << e.what() << "\n";
+          }
+        }
       } else if (ImGui::MenuItem("Load")) {
         // TODO: implement load
+        // Open file dialog to select JSON file
+        NFD::UniquePath outPath;
+
+        nfdfilteritem_t filterItem[1] = {
+            {"JSON Files", "json"}
+        };
+        nfdresult_t result = NFD::OpenDialog(outPath, filterItem, 1, nullptr);
+
+        if (result == NFD_OKAY) {
+          try {
+            std::ifstream file{outPath.get()};
+            std::string   jsonString{std::istreambuf_iterator<char>(file),
+                                   std::istreambuf_iterator<char>()};
+            graph = loadJson(jsonString);
+          } catch (const std::exception& e) {
+            std::cerr << "Error loading JSON: " << e.what() << "\n";
+          }
+        }
       }
       ImGui::EndMenu();
     }
