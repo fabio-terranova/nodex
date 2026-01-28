@@ -1,5 +1,6 @@
+#include "Constants.h"
 #include "Core.h"
-#include "GuiNodes.h"
+#include "Gui.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -13,19 +14,12 @@
 #include <iostream>
 
 using Nodex::Filter::Signal;
+using namespace Nodex::Gui;
 
 // function declarations
 void framebuffer_size_callback(GLFWwindow*, int, int);
 void processInput(GLFWwindow*);
 bool initGlfw();
-
-// settings
-constexpr int   kWinWidth{1920};
-constexpr int   kWinHeight{1080};
-constexpr char  kGlslVersion[] = "#version 330 core";
-constexpr float kClearColor[4] = {0.45f, 0.55f, 0.60f, 1.00f};
-
-using namespace Nodex::App;
 
 int main(void) {
   std::cout << "Nodex::Core v" << Nodex::Core::version() << "\n";
@@ -79,7 +73,7 @@ int main(void) {
   ImGui_ImplOpenGL3_Init(kGlslVersion);
 
   // initialize graph
-  Graph graph;
+  Nodex::Core::Graph graph;
 
   // Main loop
   while (!glfwWindowShouldClose(window)) {

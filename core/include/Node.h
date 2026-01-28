@@ -1,10 +1,12 @@
 #include "Core.h"
 #include "nlohmann/json.hpp"
-#include "nlohmann/json_fwd.hpp"
-#include <stdexcept>
 #include <string>
 #include <string_view>
 
+/**
+ * @file Node.h
+ * @brief Node and Graph classes.
+ */
 namespace Nodex::Core {
 using PortID = std::size_t;
 using NodeID = std::size_t;
@@ -235,7 +237,7 @@ void OutPort<T>::disconnectAll() {
 
 template <typename T>
 void OutPort<T>::removeConnection(InPort<T>* port) {
-  auto it = std::find(m_connectedPorts.begin(), m_connectedPorts.end(), port);
+  auto it = std::ranges::find(m_connectedPorts, port);
 
   if (it != m_connectedPorts.end()) {
     m_connectedPorts.erase(it);
@@ -244,9 +246,9 @@ void OutPort<T>::removeConnection(InPort<T>* port) {
 
 template <typename T>
 bool OutPort<T>::connected(Port* port) const {
-  return std::find(m_connectedPorts.begin(), m_connectedPorts.end(), port) !=
-         m_connectedPorts.end();
+  return std::ranges::find(m_connectedPorts, port) != m_connectedPorts.end();
 }
+
 template <typename T>
 const T& OutPort<T>::value() {
   Graph* graph = m_node ? m_node->graph() : nullptr;

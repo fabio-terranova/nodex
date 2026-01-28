@@ -1,11 +1,15 @@
-#ifndef INCLUDE_CORE_CORE_H_
-#define INCLUDE_CORE_CORE_H_
+#ifndef INCLUDE_INCLUDE_CORE_H_
+#define INCLUDE_INCLUDE_CORE_H_
 
 #include <functional>
 #include <map>
 #include <memory>
 #include <string_view>
 
+/**
+ * @file Core.h
+ * @brief Core utilities and type aliases for the Nodex library.
+ */
 namespace Nodex::Core {
 template <typename T>
 using Function = std::function<T>;
@@ -26,6 +30,7 @@ template <typename Key, typename Value>
 using UnorderedMap = std::unordered_map<Key, Value>;
 
 inline constexpr std::string_view version() { return "0.1.0"; };
+
 } // namespace Nodex::Core
 
-#endif // INCLUDE_CORE_CORE_H_
+#endif // INCLUDE_INCLUDE_CORE_H_
