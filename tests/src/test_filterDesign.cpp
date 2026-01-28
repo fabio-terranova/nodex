@@ -68,6 +68,7 @@ bool testChebyshevII(const int order, const double fc, const double fs,
 
 int main() {
   using namespace Nodex::Filter;
+  using namespace std::complex_literals;
 
   const auto order{2};
   const auto fnode{lowpass};
