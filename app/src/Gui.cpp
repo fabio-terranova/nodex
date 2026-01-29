@@ -2,6 +2,7 @@
 #include "Core.h"
 #include "FilterEigen.h"
 #include "Serializer.h"
+#include "Utils.h"
 #include "imgui.h"
 #include "implot.h"
 #include "nfd.hpp"
@@ -235,6 +236,65 @@ nlohmann::json FilterNode::serialize() const {
   return j;
 }
 
+// CSVNode
+CSVNode::CSVNode(const std::string_view name, const std::string& filePath)
+    : Node{name, "CSV Import"}, m_filePath{filePath} {
+  if (!m_filePath.empty()) {
+    loadCsvFile(m_filePath);
+  }
+}
+
+void CSVNode::loadCsvFile(const std::string& filePath) {
+  try {
+    m_csvData  = Nodex::Utils::loadCsvData(filePath);
+    m_filePath = filePath;
+
+    // Remove old outputs
+    m_outputs.clear();
+
+    // Create output port for each column
+    for (const auto& colName : m_csvData.columnNames) {
+      // Capture column data in lambda
+      addOutput<Eigen::ArrayXd>(colName, [this, colName]() {
+        auto it = m_csvData.columns.find(colName);
+        return it != m_csvData.columns.end() ? it->second : Eigen::ArrayXd{};
+      });
+    }
+  } catch (const std::exception& e) {
+    std::cerr << "Error loading CSV: " << e.what() << "\n";
+  }
+}
+
+void CSVNode::render() {
+  ImGui::Text("File: %s", m_filePath.empty() ? "(none)" : m_filePath.c_str());
+  ImGui::Text("Columns: %zu, Rows: %ld", m_csvData.columnNames.size(),
+              m_csvData.columnNames.empty()
+                  ? 0
+                  : m_csvData.columns.begin()->second.size());
+
+  if (ImGui::Button("Load CSV...")) {
+    NFD::UniquePath outPath;
+    nfdfilteritem_t filterItem[1] = {
+        {"CSV Files", "csv"}
+    };
+    nfdresult_t result = NFD::OpenDialog(outPath, filterItem, 1, nullptr);
+
+    if (result == NFD_OKAY) {
+      loadCsvFile(outPath.get());
+    }
+  }
+}
+
+nlohmann::json CSVNode::serialize() const {
+  nlohmann::json j = Node::serialize();
+  j["type"]        = "CSVNode";
+  j["parameters"]  = {
+      {"filePath", m_filePath}
+  };
+
+  return j;
+}
+
 void drawConnections(Graph&                                   graph,
                      std::unordered_map<const Port*, ImVec2>& portPositions,
                      DragDropState&                           dragDropState) {
@@ -303,6 +363,9 @@ void renderNodeMenu(Graph& graph) {
   if (ImGui::MenuItem("Sine wave"))
     graph.createNode<SineNode>(nodeName);
 
+  if (ImGui::MenuItem("CSV Import"))
+    graph.createNode<CSVNode>(nodeName);
+
   if (ImGui::MenuItem("Mixer")) {
     s_pendingMixerNodeName = nodeName;
     s_openMixerModal       = true;
@@ -368,6 +431,90 @@ void graphWindow(Graph& graph) {
             std::cerr << "Error loading JSON: " << e.what() << "\n";
           }
         }
+      } else if (ImGui::BeginMenu("Export")) {
+        // Export submenu for each output node
+        bool anyOutputNodes = false;
+        for (auto& node : graph.getNodes()) {
+          auto csvNode = dynamic_cast<CSVNode*>(node.get());
+
+          // Special handling for CSVNode - export all columns
+          if (csvNode) {
+            const auto& csvData = csvNode->getData();
+            if (!csvData.columnNames.empty()) {
+              if (ImGui::MenuItem(
+                      (std::string(node->name()) + " (all columns)").c_str())) {
+                try {
+                  NFD::UniquePath savePath;
+                  nfdfilteritem_t filterItem[1] = {
+                      {"CSV Files", "csv"}
+                  };
+                  nfdresult_t result =
+                      NFD::SaveDialog(savePath, filterItem, 1, nullptr);
+
+                  if (result == NFD_OKAY) {
+                    Nodex::Utils::saveCsvData(savePath.get(), csvData);
+                    std::cout << "Exported to: " << savePath.get() << "\n";
+                  }
+                } catch (const std::exception& e) {
+                  std::cerr << "Error exporting CSV: " << e.what() << "\n";
+                }
+              }
+              anyOutputNodes = true;
+            }
+            continue;
+          }
+
+          if (node->outputNames().empty()) {
+            continue;
+          }
+
+          // Create menu item for each node with outputs
+          for (const auto& outputName : node->outputNames()) {
+            std::string menuLabel =
+                std::string(node->name()) + " - " + std::string(outputName);
+            if (ImGui::MenuItem(menuLabel.c_str())) {
+              try {
+                auto viewerNode = dynamic_cast<ViewerNode*>(node.get());
+
+                // Try to extract data based on node type
+                Eigen::ArrayXd data;
+                if (viewerNode) {
+                  data = viewerNode->inputValue<Eigen::ArrayXd>("In");
+                } else {
+                  // For other nodes, try to get value from output port
+                  try {
+                    auto outPortPtr = node->output<Eigen::ArrayXd>(outputName);
+                    data            = outPortPtr->value();
+                  } catch (...) {
+                    std::cerr << "Cannot export from this output type\n";
+                    continue;
+                  }
+                }
+
+                NFD::UniquePath savePath;
+                nfdfilteritem_t filterItem[1] = {
+                    {"CSV Files", "csv"}
+                };
+                nfdresult_t result =
+                    NFD::SaveDialog(savePath, filterItem, 1, nullptr);
+
+                if (result == NFD_OKAY) {
+                  Nodex::Utils::saveCsvData(savePath.get(), data);
+                  std::cout << "Exported to: " << savePath.get() << "\n";
+                }
+              } catch (const std::exception& e) {
+                std::cerr << "Error exporting CSV: " << e.what() << "\n";
+              }
+            }
+            anyOutputNodes = true;
+          }
+        }
+
+        if (!anyOutputNodes) {
+          ImGui::MenuItem("(No outputs available)", nullptr, false, false);
+        }
+
+        ImGui::EndMenu();
       }
       ImGui::EndMenu();
     }

@@ -4,7 +4,9 @@
 #include "Constants.h"
 #include "Filter.h"
 #include "Node.h"
+#include "Utils.h"
 #include "imgui.h"
+#include "nfd.hpp"
 #include "nlohmann/json_fwd.hpp"
 #include <Eigen/Dense>
 #include <cstddef>
@@ -112,6 +114,23 @@ private:
   double              m_cutoffFreq{kDefaultCutoffFreq};
   double              m_samplingFreq{kDefaultSamplingFreq};
 };
+
+class CSVNode : public Core::Node {
+public:
+  CSVNode(const std::string_view name, const std::string& filePath = "");
+
+  void           render() override;
+  nlohmann::json serialize() const override;
+
+  const Utils::CsvData& getData() const { return m_csvData; }
+
+private:
+  std::string              m_filePath{};
+  Utils::CsvData m_csvData{};
+
+  void loadCsvFile(const std::string& filePath);
+};
+
 } // namespace Nodex::Gui
 
 #endif // INCLUDE_INCLUDE_GUINODES_H_

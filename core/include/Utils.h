@@ -4,6 +4,9 @@
 #include <Eigen/Dense>
 #include <chrono>
 #include <complex>
+#include <map>
+#include <string>
+#include <vector>
 
 namespace Nodex {
 namespace Utils {
@@ -34,7 +37,51 @@ private:
   std::chrono::time_point<Clock> m_beg{Clock::now()};
 };
 
+/**
+ * Structure representing loaded CSV data with column information.
+ */
+struct CsvData {
+  std::vector<std::string>              columnNames;  // Column names/headers
+  std::map<std::string, Eigen::ArrayXd> columns;      // Column data by name
+};
+
 ArrayXi arange(const int start, int stop, const int step);
+
+/**
+ * Loads signal data from a CSV file with multiple columns.
+ * Automatically detects and parses columns.
+ * First row is treated as header if it contains non-numeric values.
+ * Otherwise, columns are named Col1, Col2, etc.
+ *
+ * @param filePath Path to the CSV file
+ * @return CsvData structure containing column names and data
+ * @throws std::runtime_error if file cannot be read or contains invalid data
+ */
+CsvData loadCsvData(const std::string& filePath);
+
+/**
+ * Saves signal data to a CSV file.
+ * Writes one value per line.
+ *
+ * @param filePath Path to the CSV file to write
+ * @param data Signal data to save
+ * @param precision Number of decimal places for numeric precision
+ * @throws std::runtime_error if file cannot be written
+ */
+void saveCsvData(const std::string& filePath, const Eigen::ArrayXd& data,
+                 int precision = 6);
+
+/**
+ * Saves multiple columns to a CSV file.
+ *
+ * @param filePath Path to the CSV file to write
+ * @param data CsvData structure with columns to save
+ * @param precision Number of decimal places for numeric precision
+ * @throws std::runtime_error if file cannot be written
+ */
+void saveCsvData(const std::string& filePath, const CsvData& data,
+                 int precision = 6);
+
 } // namespace Utils
 } // namespace Nodex
 

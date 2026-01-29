@@ -90,6 +90,15 @@ static const std::map<std::string, NodeFactory>& getNodeFactories() {
            const nlohmann::json&) {
          return graph.createNode<ViewerNode>(nodeName);
        }},
+
+      {"CSVNode",
+       [](Core::Graph& graph, const std::string& nodeName,
+           const nlohmann::json& params) {
+         std::string filePath = params.contains("filePath")
+                                    ? params["filePath"].get<std::string>()
+                                    : "";
+         return graph.createNode<CSVNode>(nodeName, filePath);
+       }},
   };
 
   return factories;

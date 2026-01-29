@@ -55,7 +55,7 @@ public:
 
   void connect(Port* port) override;
   void disconnect(Port* port) override { port->disconnect(this); }
-  void disconnectAll();
+  void disconnectAll() override;
 
   void addConnection(InPort<T>* port) { m_connectedPorts.emplace_back(port); }
   void removeConnection(InPort<T>* port);
