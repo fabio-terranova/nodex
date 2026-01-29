@@ -8,8 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace Nodex {
-namespace Utils {
+namespace Nodex::Utils {
 // Aliases for commonly used Eigen types
 using Eigen::ArrayXi;
 
@@ -41,8 +40,8 @@ private:
  * Structure representing loaded CSV data with column information.
  */
 struct CsvData {
-  std::vector<std::string>              columnNames;  // Column names/headers
-  std::map<std::string, Eigen::ArrayXd> columns;      // Column data by name
+  std::vector<std::string>              columnNames; // Column names/headers
+  std::map<std::string, Eigen::ArrayXd> columns;     // Column data by name
 };
 
 ArrayXi arange(const int start, int stop, const int step);
@@ -51,7 +50,6 @@ ArrayXi arange(const int start, int stop, const int step);
  * Loads signal data from a CSV file with multiple columns.
  * Automatically detects and parses columns.
  * First row is treated as header if it contains non-numeric values.
- * Otherwise, columns are named Col1, Col2, etc.
  *
  * @param filePath Path to the CSV file
  * @return CsvData structure containing column names and data
@@ -82,7 +80,6 @@ void saveCsvData(const std::string& filePath, const Eigen::ArrayXd& data,
 void saveCsvData(const std::string& filePath, const CsvData& data,
                  int precision = 6);
 
-} // namespace Utils
-} // namespace Nodex
+} // namespace Nodex::Utils
 
 #endif // INCLUDE_INCLUDE_UTILS_H_
