@@ -1,3 +1,6 @@
+#ifndef INCLUDE_INCLUDE_NODE_H_
+#define INCLUDE_INCLUDE_NODE_H_
+
 #include "Core.h"
 #include "nlohmann/json.hpp"
 #include <string>
@@ -353,3 +356,5 @@ T* Graph::createNode(Args&&... args) {
   return ptr;
 }
 } // namespace Nodex::Core
+
+#endif // INCLUDE_INCLUDE_NODE_H_

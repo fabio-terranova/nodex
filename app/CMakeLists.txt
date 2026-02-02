@@ -2,6 +2,7 @@ find_package(OpenGL REQUIRED)
 
 add_executable(nodex_gui
     ./src/main.cpp
+    ./src/Application.cpp
     ./src/Gui.cpp
     ./src/Serializer.cpp
     ${CMAKE_SOURCE_DIR}/external/glad/src/glad.c

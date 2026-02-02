@@ -1,14 +1,14 @@
-#ifndef INCLUDE_INCLUDE_GUICONSTANTS_H_
-#define INCLUDE_INCLUDE_GUICONSTANTS_H_
+#ifndef INCLUDE_INCLUDE_CONSTANTS_H_
+#define INCLUDE_INCLUDE_CONSTANTS_H_
 
 #include "Filter.h"
 #include "imgui.h"
 #include <numbers>
 
 /**
- * GUI-related constants for Nodex application.
+ * Constants for the Nodex application.
  */
-namespace Nodex::Gui {
+namespace Nodex::Constants {
 // Numbers
 constexpr double kTwoPi = 2.0 * std::numbers::pi;
 
@@ -46,6 +46,6 @@ constexpr Filter::Type kDefaultFilterType  = Filter::Type::butter;
 constexpr int          kDefaultFilterOrder = 2;
 constexpr double       kDefaultCutoffFreq  = 100.0;
 
-} // namespace Nodex::Gui
+} // namespace Nodex::Constants
 
-#endif // INCLUDE_INCLUDE_GUICONSTANTS_H_
+#endif // INCLUDE_INCLUDE_CONSTANTS_H_

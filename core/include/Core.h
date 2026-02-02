@@ -4,7 +4,6 @@
 #include <functional>
 #include <map>
 #include <memory>
-#include <string_view>
 
 /**
  * @file Core.h
@@ -28,9 +27,6 @@ using Map = std::map<Key, Value>;
 
 template <typename Key, typename Value>
 using UnorderedMap = std::unordered_map<Key, Value>;
-
-inline constexpr std::string_view version() { return "0.1.0"; };
-
 } // namespace Nodex::Core
 
 #endif // INCLUDE_INCLUDE_CORE_H_

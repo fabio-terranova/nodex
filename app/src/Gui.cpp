@@ -35,7 +35,7 @@ MixerNode::MixerNode(const std::string_view name, const std::size_t inputs,
                      const std::vector<double>& gains)
     : Node{name, "Mixer"}, m_inputs{inputs}, m_gains{gains} {
   if (m_gains.empty()) {
-    m_gains = std::vector<double>(m_inputs, kDefaultGain);
+    m_gains = std::vector<double>(m_inputs, Constants::kDefaultGain);
   }
 
   for (std::size_t i{0}; i < m_inputs; ++i) {
@@ -95,6 +95,8 @@ ViewerNode::ViewerNode(const std::string_view name) : Node{name, "Viewer"} {
 }
 
 void ViewerNode::render() {
+  using namespace Constants;
+
   auto data{inputValue<Eigen::ArrayXd>("In")};
   if (data.size() > 0) {
     if (ImPlot::BeginPlot("Time plot", ImVec2{kPlotWidth, kPlotHeight})) {
@@ -147,7 +149,9 @@ SineNode::SineNode(const std::string_view name, const int size,
 
 Eigen::ArrayXd SineNode::generateWave() const {
   Eigen::ArrayXd sineWave(m_samples);
-  const double   freqPhaseScale = kTwoPi * m_frequency / m_samplingFreq;
+
+  const double freqPhaseScale{Constants::kTwoPi * m_frequency / m_samplingFreq};
+
   for (int i = 0; i < m_samples; ++i) {
     sineWave[i] =
         m_amplitude * std::sin(freqPhaseScale * i + m_phase) + m_offset;
@@ -160,7 +164,7 @@ void SineNode::render() {
   ImGui::InputInt("Number of samples", &m_samples);
   ImGui::SliderDouble("f (Hz)", &m_frequency, 0.1, m_samplingFreq / 2, "%.2f");
   ImGui::InputDouble("Amplitude", &m_amplitude, 0.1, 1.0, "%.2f");
-  ImGui::SliderDouble("Phase (rad)", &m_phase, 0.0, kTwoPi, "%.2f");
+  ImGui::SliderDouble("Phase (rad)", &m_phase, 0.0, Constants::kTwoPi, "%.2f");
   ImGui::InputDouble("fs (Hz)", &m_samplingFreq, 10.0, 100.0, "%.2f");
   ImGui::InputDouble("Offset", &m_offset, 0.1, 1.0, "%.2f");
 }
@@ -298,6 +302,8 @@ nlohmann::json CSVNode::serialize() const {
 void drawConnections(Graph&                                   graph,
                      std::unordered_map<const Port*, ImVec2>& portPositions,
                      DragDropState&                           dragDropState) {
+  using namespace Constants;
+
   ImDrawList* drawList = ImGui::GetForegroundDrawList();
 
   // Draw existing connections
@@ -522,7 +528,8 @@ void graphWindow(Graph& graph) {
       if (ImGui::BeginMenu("Add")) {
         renderNodeMenu(graph);
         ImGui::EndMenu();
-      } else if (ImGui::MenuItem("Clear all")) {
+      }
+      if (ImGui::MenuItem("Clear all")) {
         graph.clear();
       }
       ImGui::EndMenu();

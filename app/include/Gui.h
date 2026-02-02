@@ -1,12 +1,11 @@
-#ifndef INCLUDE_INCLUDE_GUINODES_H_
-#define INCLUDE_INCLUDE_GUINODES_H_
+#ifndef INCLUDE_INCLUDE_GUI_H_
+#define INCLUDE_INCLUDE_GUI_H_
 
 #include "Constants.h"
 #include "Filter.h"
 #include "Node.h"
 #include "Utils.h"
 #include "imgui.h"
-#include "nfd.hpp"
 #include "nlohmann/json_fwd.hpp"
 #include <Eigen/Dense>
 #include <cstddef>
@@ -19,7 +18,7 @@ Core::Graph loadFromJson(const std::string&);
 }
 
 /**
- * GUI node implementations. 
+ * GUI node implementations.
  */
 namespace Nodex::Gui {
 /**
@@ -62,7 +61,8 @@ private:
 
 class RandomDataNode : public Core::Node {
 public:
-  RandomDataNode(const std::string_view name, const int size = kDefaultSamples);
+  RandomDataNode(const std::string_view name,
+                 const int              size = Constants::kDefaultSamples);
 
   void           render() override;
   nlohmann::json serialize() const override;
@@ -74,12 +74,12 @@ private:
 
 class SineNode : public Core::Node {
 public:
-  SineNode(const std::string_view name, int size = kDefaultSamples,
-           const double frequency = kDefaultFrequency,
-           const double amplitude = kDefaultAmplitude,
-           const double phase     = kDefaultPhase,
-           const double fs        = kDefaultSamplingFreq,
-           const double offset    = kDefaultOffset);
+  SineNode(const std::string_view name, int size = Constants::kDefaultSamples,
+           const double frequency = Constants::kDefaultFrequency,
+           const double amplitude = Constants::kDefaultAmplitude,
+           const double phase     = Constants::kDefaultPhase,
+           const double fs        = Constants::kDefaultSamplingFreq,
+           const double offset    = Constants::kDefaultOffset);
 
   void           render() override;
   nlohmann::json serialize() const override;
@@ -98,21 +98,21 @@ private:
 class FilterNode : public Core::Node {
 public:
   FilterNode(const std::string_view name,
-             const Filter::Mode     mode         = kDefaultFilterMode,
-             const Filter::Type     type         = kDefaultFilterType,
-             const int              order        = kDefaultFilterOrder,
-             const double           cutoffFreq   = kDefaultCutoffFreq,
-             const double           samplingFreq = kDefaultSamplingFreq);
+             const Filter::Mode     mode       = Constants::kDefaultFilterMode,
+             const Filter::Type     type       = Constants::kDefaultFilterType,
+             const int              order      = Constants::kDefaultFilterOrder,
+             const double           cutoffFreq = Constants::kDefaultCutoffFreq,
+             const double samplingFreq = Constants::kDefaultSamplingFreq);
 
   void           render() override;
   nlohmann::json serialize() const override;
 
 private:
-  Nodex::Filter::Mode m_filterMode{kDefaultFilterMode};
-  Nodex::Filter::Type m_filterType{kDefaultFilterType};
-  int                 m_filterOrder{kDefaultFilterOrder};
-  double              m_cutoffFreq{kDefaultCutoffFreq};
-  double              m_samplingFreq{kDefaultSamplingFreq};
+  Nodex::Filter::Mode m_filterMode{};
+  Nodex::Filter::Type m_filterType{};
+  int                 m_filterOrder{};
+  double              m_cutoffFreq{};
+  double              m_samplingFreq{};
 };
 
 class CSVNode : public Core::Node {
@@ -125,7 +125,7 @@ public:
   const Utils::CsvData& getData() const { return m_csvData; }
 
 private:
-  std::string              m_filePath{};
+  std::string    m_filePath{};
   Utils::CsvData m_csvData{};
 
   void loadCsvFile(const std::string& filePath);
@@ -133,4 +133,4 @@ private:
 
 } // namespace Nodex::Gui
 
-#endif // INCLUDE_INCLUDE_GUINODES_H_
+#endif // INCLUDE_INCLUDE_GUI_H_
