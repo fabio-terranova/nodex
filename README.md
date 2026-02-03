@@ -6,13 +6,14 @@ A visual node-based graph editor for digital signal processing.
 
 ## Features
 
-- **Visual node editor**: Intuitive drag-and-drop interface for creating signal
- processing graphs
+- **Visual node editor**: Intuitive interface for creating signal processing
+ graphs
 - **Node management**: Create, delete, and configure signal processing nodes
 - **Graph persistence**: Save and load node graphs for reproducible workflows
-- **Filtering**: Built-in support for various filter types (Butterworth,
  Chebyshev, etc.)
-- **Python bindings**: Programmatic access to core functionality via Python
+- **Built-in nodes**: Common signal processing operations (filters, mixers,
+ viewers)
+- **Python bindings**: Access to core functionality via Python
 
 ### Dependencies
 
@@ -29,9 +30,7 @@ The project uses the following external libraries:
 ```bash
 mkdir -p build
 cd build
-cmake ..
-cmake --build .
-```
+cmake .. cmake --build . ```
 
 ## Project Structure
 
