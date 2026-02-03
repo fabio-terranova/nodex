@@ -1,6 +1,5 @@
 #include "Application.h"
 #include "Constants.h"
-#include "Core.h"
 #include "Gui.h"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
