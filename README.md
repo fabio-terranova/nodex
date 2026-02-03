@@ -1,15 +1,33 @@
 # Nodex
 
-WORK IN PROGRESS...
+A visual node-based graph editor for digital signal processing.
 
-<img width="1553" height="967" alt="image" src="https://github.com/user-attachments/assets/15371f3f-2dd1-4906-8189-3f78ebdc6450" />
+![Nodex GUI Preview](https://github.com/user-attachments/assets/15371f3f-2dd1-4906-8189-3f78ebdc6450)
+
+## Features
+
+- **Visual node editor**: Intuitive drag-and-drop interface for creating signal
+ processing graphs
+- **Node management**: Create, delete, and configure signal processing nodes
+- **Graph persistence**: Save and load node graphs for reproducible workflows
+- **Filtering**: Built-in support for various filter types (Butterworth,
+ Chebyshev, etc.)
+- **Python bindings**: Programmatic access to core functionality via Python
+
+### Dependencies
+
+The project uses the following external libraries:
+
+- **Eigen**: Linear algebra library
+- **ImGui**: GUI framework
+- **ImPlot**: Plotting library
+- **JSON (nlohmann)**: JSON serialization
+- **pybind11**: C++-Python bindings
 
 ## Building
 
-This project uses CMake. To build:
-
 ```bash
-mkdir build
+mkdir -p build
 cd build
 cmake ..
 cmake --build .
@@ -18,31 +36,47 @@ cmake --build .
 ## Project Structure
 
 ```
-├── app/          # Main application code
-├── core/         # Core library
-├── bindings/     # Language bindings (python with pybind11 for now)
-├── external/     # Third-party dependencies
-├── examples/     # Example python scripts
-└── tests/        # Test files
+├── app/                  # Main GUI application
+│   ├── include/          # Application headers
+│   └── src/              # Application implementation
+├── core/                 # Core signal processing library
+│   ├── include/          # Core headers
+│   └── src/              # Core implementation
+├── bindings/             # Language bindings
+│   └── python/           # Python bindings with pybind11
+├── external/             # Third-party dependencies
+├── examples/             # Example scripts and usage demos
+└── tests/                # Tests
 ```
 
 ## Usage
 
-Run the application from the build directory:
+### Running the GUI Application
 
 ```bash
-./bin/nodex_gui
+./build/bin/nodex_gui
 ```
 
-## Examples
+- Right-click for context menu
+- Create nodes from the menu
+- Drag connections between node ports
+- Save/load graphs via File menu
 
-Example python scripts are located in the `examples/` directory. To run an example:
+### Python Scripting
+
+Example scripts are located in `examples/`:
 
 ```bashpython
-python examples/example_script.py
+python examples/[example_script].py
 ```
 
-Ensure you have the necessary Python dependencies installed and the `pynodex` module is accessible in your `PYTHONPATH`.
+To use the Python bindings:
+
+```python
+import pynodex
+```
+
+Ensure the `pynodex` module is accessible in your `PYTHONPATH`.
 
 ## License
 
