@@ -30,7 +30,8 @@ The project uses the following external libraries:
 ```bash
 mkdir -p build
 cd build
-cmake .. cmake --build . ```
+cmake .. cmake --build .
+```
 
 ## Project Structure
 
