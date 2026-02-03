@@ -30,6 +30,10 @@ static int         s_mixerInputs          = 2;
 static bool        s_openMixerModal       = false;
 static std::string s_pendingMixerNodeName = {};
 
+static int         s_multiViewerInputs          = 2;
+static bool        s_openMultiViewerModal       = false;
+static std::string s_pendingMultiViewerNodeName = {};
+
 // MixerNode
 MixerNode::MixerNode(const std::string_view name, const std::size_t inputs,
                      const std::vector<double>& gains)
@@ -111,6 +115,41 @@ void ViewerNode::render() {
 nlohmann::json ViewerNode::serialize() const {
   nlohmann::json j = Node::serialize();
   j["type"]        = "ViewerNode";
+
+  return j;
+}
+
+// MultiViewerNode
+MultiViewerNode::MultiViewerNode(const std::string_view name,
+                                 const std::size_t      inputs)
+    : Node{name, "Multi-Viewer"}, m_inputs{inputs} {
+  for (std::size_t i{0}; i < m_inputs; ++i) {
+    std::string portName = "In " + std::to_string(i + 1);
+    addInput<Eigen::ArrayXd>(portName, Eigen::ArrayXd{});
+  }
+}
+
+void MultiViewerNode::render() {
+  using namespace Constants;
+
+  if (ImPlot::BeginPlot("Multi-Viewer", ImVec2{kPlotWidth, kPlotHeight})) {
+    for (std::size_t i{0}; i < m_inputs; ++i) {
+      auto data = inputValue<Eigen::ArrayXd>("In " + std::to_string(i + 1));
+      if (data.size() > 0) {
+        ImPlot::PlotLine(("Input " + std::to_string(i + 1)).c_str(),
+                         data.data(), static_cast<int>(data.size()));
+      }
+    }
+    ImPlot::EndPlot();
+  }
+}
+
+nlohmann::json MultiViewerNode::serialize() const {
+  nlohmann::json j = Node::serialize();
+  j["type"]        = "MultiViewerNode";
+  j["parameters"]  = {
+      {"inputs", m_inputs}
+  };
 
   return j;
 }
@@ -382,6 +421,11 @@ void renderNodeMenu(Graph& graph) {
 
   if (ImGui::MenuItem("Viewer"))
     graph.createNode<ViewerNode>(nodeName);
+
+  if (ImGui::MenuItem("Multi-Viewer")) {
+    s_pendingMultiViewerNodeName = nodeName;
+    s_openMultiViewerModal       = true;
+  }
 }
 
 void graphWindow(Graph& graph) {
@@ -419,7 +463,8 @@ void graphWindow(Graph& graph) {
             std::cerr << "Error saving JSON: " << e.what() << "\n";
           }
         }
-      } else if (ImGui::MenuItem("Load")) {
+      }
+      if (ImGui::MenuItem("Load")) {
         NFD::UniquePath outPath;
 
         nfdfilteritem_t filterItem[1] = {
@@ -437,7 +482,8 @@ void graphWindow(Graph& graph) {
             std::cerr << "Error loading JSON: " << e.what() << "\n";
           }
         }
-      } else if (ImGui::BeginMenu("Export")) {
+      }
+      if (ImGui::BeginMenu("Export")) {
         // Export submenu for each output node
         bool anyOutputNodes = false;
         for (auto& node : graph.getNodes()) {
@@ -522,6 +568,7 @@ void graphWindow(Graph& graph) {
 
         ImGui::EndMenu();
       }
+
       ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("Edit")) {
@@ -551,9 +598,25 @@ void graphWindow(Graph& graph) {
   if (ImGui::BeginPopupModal("Mixer Inputs", nullptr,
                              ImGuiWindowFlags_AlwaysAutoResize)) {
     ImGui::InputInt("Number of inputs", &s_mixerInputs);
-    if (ImGui::Button("OK")) {
+    if (ImGui::Button("Ok")) {
       graph.createNode<MixerNode>(s_pendingMixerNodeName, s_mixerInputs);
       s_pendingMixerNodeName.clear();
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+  }
+
+  if (s_openMultiViewerModal) {
+    ImGui::OpenPopup("Multi-Viewer Inputs");
+    s_openMultiViewerModal = false;
+  }
+  if (ImGui::BeginPopupModal("Multi-Viewer Inputs", nullptr,
+                             ImGuiWindowFlags_AlwaysAutoResize)) {
+    ImGui::InputInt("Number of inputs", &s_multiViewerInputs);
+    if (ImGui::Button("Ok")) {
+      graph.createNode<MultiViewerNode>(s_pendingMultiViewerNodeName,
+                                        s_multiViewerInputs);
+      s_pendingMultiViewerNodeName.clear();
       ImGui::CloseCurrentPopup();
     }
     ImGui::EndPopup();

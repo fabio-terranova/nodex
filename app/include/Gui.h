@@ -45,6 +45,16 @@ public:
   nlohmann::json serialize() const override;
 };
 
+class MultiViewerNode : public Core::Node {
+public:
+  MultiViewerNode(const std::string_view name, const std::size_t inputs = 2);
+
+  void           render() override;
+  nlohmann::json serialize() const override;
+private:
+  std::size_t m_inputs{};
+};
+
 class MixerNode : public Core::Node {
 public:
   MixerNode(const std::string_view name, const std::size_t inputs = 2,

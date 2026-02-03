@@ -1,6 +1,7 @@
 #include "Serializer.h"
 #include "Constants.h"
 #include "nlohmann/json.hpp"
+#include <cstddef>
 #include <functional>
 #include <map>
 #include <stdexcept>
@@ -85,6 +86,15 @@ Core::Node* createFilter(Core::Graph& graph, const std::string& nodeName,
 Core::Node* createViewer(Core::Graph& graph, const std::string& nodeName,
                          [[maybe_unused]] const nlohmann::json& params) {
   return graph.createNode<ViewerNode>(nodeName);
+}
+
+Core::Node* createMultiViewer(Core::Graph& graph, const std::string& nodeName,
+                              const nlohmann::json& params) {
+  std::size_t inputs = params.contains("inputs")
+                           ? params["inputs"].get<std::size_t>()
+                           : Constants::kNumInputs;
+
+  return graph.createNode<MultiViewerNode>(nodeName, inputs);
 }
 
 Core::Node* createCSV(Core::Graph& graph, const std::string& nodeName,
