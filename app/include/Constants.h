@@ -23,8 +23,8 @@ constexpr ImU32 kLinkColor     = IM_COL32(255, 100, 100, 255); // Flashy red
 constexpr ImU32 kDragLineColor = IM_COL32(100, 200, 255, 200); // Blue drag line
 constexpr float kLinkThickness = 2.0f;
 constexpr float kBezierOffset  = 50.0f; // Bezier curve control point offset
-constexpr float kPlotWidth     = 200.0f;
-constexpr float kPlotHeight    = 150.0f;
+constexpr float kPlotWidth     = 300.0f;
+constexpr float kPlotHeight    = 200.0f;
 
 // Default parameters (general)
 constexpr double kDefaultSamplingFreq = 1000.0;

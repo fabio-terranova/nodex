@@ -62,6 +62,10 @@ void Graph::removeNode(std::string_view name) {
   m_nextNodeID--;
 }
 
+void Graph::connect(Port* outputPort, Port* inputPort) {
+  inputPort->connect(outputPort);
+}
+
 nlohmann::json Graph::serialize() const {
   // for each node, serialize its data
   nlohmann::json j;

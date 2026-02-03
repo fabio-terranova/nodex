@@ -63,21 +63,19 @@ Core::Node* createFilter(Core::Graph& graph, const std::string& nodeName,
                          const nlohmann::json& params) {
   using namespace Constants;
 
-  auto   mode         = params.contains("filter_mode")
-                            ? static_cast<Filter::Mode>(params["filter_mode"].get<int>())
-                            : kDefaultFilterMode;
-  auto   type         = params.contains("filter_type")
-                            ? static_cast<Filter::Type>(params["filter_type"].get<int>())
-                            : kDefaultFilterType;
-  int    order        = params.contains("filter_order")
-                            ? params["filter_order"].get<int>()
-                            : kDefaultFilterOrder;
-  double cutoffFreq   = params.contains("cutoff_freq")
-                            ? params["cutoff_freq"].get<double>()
-                            : kDefaultCutoffFreq;
-  double samplingFreq = params.contains("sampling_freq")
-                            ? params["sampling_freq"].get<double>()
-                            : kDefaultSamplingFreq;
+  auto   mode  = params.contains("filter_mode")
+                     ? static_cast<Filter::Mode>(params["filter_mode"].get<int>())
+                     : kDefaultFilterMode;
+  auto   type  = params.contains("filter_type")
+                     ? static_cast<Filter::Type>(params["filter_type"].get<int>())
+                     : kDefaultFilterType;
+  int    order = params.contains("filter_order")
+                     ? params["filter_order"].get<int>()
+                     : kDefaultFilterOrder;
+  double cutoffFreq =
+      params.contains("fc") ? params["fc"].get<double>() : kDefaultCutoffFreq;
+  double samplingFreq =
+      params.contains("fs") ? params["fs"].get<double>() : kDefaultSamplingFreq;
 
   return graph.createNode<FilterNode>(nodeName, mode, type, order, cutoffFreq,
                                       samplingFreq);
@@ -110,12 +108,13 @@ Core::Node* createCSV(Core::Graph& graph, const std::string& nodeName,
 static const std::map<std::string, NodeFactory>& getNodeFactories() {
   using namespace Constants;
   static const std::map<std::string, NodeFactory> factories = {
-      {"RandomDataNode", createRandom},
-      {      "SineNode",   createSine},
-      {     "MixerNode",  createMixer},
-      {    "FilterNode", createFilter},
-      {    "ViewerNode", createViewer},
-      {       "CSVNode",    createCSV},
+      { "RandomDataNode",      createRandom},
+      {       "SineNode",        createSine},
+      {      "MixerNode",       createMixer},
+      {     "FilterNode",      createFilter},
+      {     "ViewerNode",      createViewer},
+      {        "CSVNode",         createCSV},
+      {"MultiViewerNode", createMultiViewer},
   };
 
   return factories;
@@ -176,59 +175,45 @@ Core::Graph loadFromJson(const std::string& jsonString) {
       // Process outputs to restore connections
       if (nodeJson.contains("outputs")) {
         for (const auto& outputJson : nodeJson["outputs"]) {
-          if (!outputJson.contains("name") ||
-              !outputJson.contains("connections")) {
-            continue;
-          }
+          std::string outputPortName = outputJson["name"].get<std::string>();
+          Core::Port* outputPort =
+              sourceNode->outputPort(outputPortName);
 
-          std::string outputName = outputJson["name"].get<std::string>();
-          Core::Port* sourcePort = sourceNode->outputPort(outputName);
+          if (outputJson.contains("connections")) {
+            for (const auto& connJson : outputJson["connections"]) {
+              std::string targetNodeName = connJson["node"].get<std::string>();
+              std::string targetPortName = connJson["port"].get<std::string>();
 
-          if (!sourcePort) {
-            throw std::runtime_error("Output port not found: " + outputName);
-          }
-
-          // Connect to all target ports
-          for (const auto& connJson : outputJson["connections"]) {
-            if (!connJson.contains("node") || !connJson.contains("port")) {
-              continue;
-            }
-
-            std::string targetNodeName = connJson["node"].get<std::string>();
-            std::string targetPortName = connJson["port"].get<std::string>();
-
-            // Find target node
-            Core::Node* targetNode = nullptr;
-            for (auto& node : nodes) {
-              if (node->name() == targetNodeName) {
-                targetNode = node.get();
-                break;
+              // Find the target node
+              Core::Node* targetNode = nullptr;
+              for (auto& node : nodes) {
+                if (node->name() == targetNodeName) {
+                  targetNode = node.get();
+                  break;
+                }
               }
-            }
 
-            if (!targetNode) {
-              throw std::runtime_error("Target node not found: " +
-                                       targetNodeName);
-            }
+              if (!targetNode) {
+                throw std::runtime_error(
+                    "Target node not found for connection: " + targetNodeName);
+              }
 
-            Core::Port* targetPort = targetNode->inputPort(targetPortName);
-            if (!targetPort) {
-              throw std::runtime_error("Target input port not found: " +
-                                       targetPortName);
-            }
+              Core::Port* targetPort =
+                  targetNode->inputPort(targetPortName);
 
-            // Establish connection
-            targetPort->connect(sourcePort);
+              // Connect the ports
+              graph.connect(outputPort, targetPort);
+            }
           }
-        }
       }
     }
-
-  } catch (const nlohmann::json::exception& e) {
-    throw std::runtime_error(std::string("JSON parsing error: ") + e.what());
   }
+}
+catch (const nlohmann::json::exception& e) {
+  throw std::runtime_error(std::string("JSON parsing error: ") + e.what());
+}
 
-  return graph;
+return graph;
 }
 
 } // namespace Nodex::Gui::Serializer

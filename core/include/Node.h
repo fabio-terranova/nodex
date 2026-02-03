@@ -205,6 +205,8 @@ public:
   NodeID numberOfNodes() const { return m_nextNodeID; }
 
   nlohmann::json serialize() const;
+  
+  void connect(Port* outputPort, Port* inputPort);
 
 private:
   UnorderedMap<std::string_view, SharedPtr<Node>> m_nodes;

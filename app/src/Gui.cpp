@@ -132,7 +132,7 @@ MultiViewerNode::MultiViewerNode(const std::string_view name,
 void MultiViewerNode::render() {
   using namespace Constants;
 
-  if (ImPlot::BeginPlot("Multi-Viewer", ImVec2{kPlotWidth, kPlotHeight})) {
+  if (ImPlot::BeginPlot("Time plot", ImVec2{kPlotWidth, kPlotHeight})) {
     for (std::size_t i{0}; i < m_inputs; ++i) {
       auto data = inputValue<Eigen::ArrayXd>("In " + std::to_string(i + 1));
       if (data.size() > 0) {
