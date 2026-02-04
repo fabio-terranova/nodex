@@ -7,7 +7,7 @@
 
 /**
  * @file Core.h
- * @brief Core utilities and type aliases for the Nodex library.
+ * Core utilities and type aliases for the Nodex library.
  */
 namespace Nodex::Core {
 template <typename T>

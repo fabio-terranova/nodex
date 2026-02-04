@@ -17,11 +17,13 @@ using Eigen::ArrayXi;
 using Complex = std::complex<double>;
 using Signal  = std::vector<double>;
 
-// Define a clean format for Eigen output
+// Eigen output format for clean printing
 inline const Eigen::IOFormat cleanFmt(Eigen::StreamPrecision, 0, " ", ",", "",
                                       "", "[", "]");
 
-// Simple timer class for performance measurement
+/**
+ * Simple Timer class for measuring elapsed time.
+ */
 class Timer {
   using Second = std::chrono::duration<double, std::ratio<1>>;
   using Clock  = std::chrono::steady_clock;
@@ -45,6 +47,13 @@ struct CsvData {
   std::map<std::string, Eigen::ArrayXd> columns;     // Column data by name
 };
 
+/**
+ * Generates an array of integers from start to stop with a given step.
+ * @param start The starting integer (inclusive)
+ * @param stop The stopping integer (exclusive)
+ * @param step The step size between integers
+ * @return An Eigen array of integers
+ */
 ArrayXi arange(const int start, int stop, const int step);
 
 /**

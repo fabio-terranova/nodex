@@ -7,7 +7,7 @@
 
 /**
  * @file Filter.h
- * @brief Digital filter design and application functions.
+ * Digital filter design and application functions.
  */
 namespace Nodex::Filter {
 using Nodex::Utils::Complex;
@@ -57,7 +57,8 @@ Signal linearFilter(const Coeffs& filter, const Signal& x, Signal& si);
 Signal linearFilter(const Coeffs& filter, const Signal& x);
 
 /**
- * Computes the effective impulse response of a filter given its coefficients.
+ * Computes the effective impulse response of a filter given its
+ * coefficients.
  * @param filter The filter coefficients
  * @param epsilon The tolerance for the effective impulse response calculation
  * @param maxLength The maximum length of the effective impulse response
@@ -99,8 +100,8 @@ enum Type {
 };
 
 /**
- * Transforms an analogue filter to a digital filter using the given mode and
- * bilinear transform.
+ * Transforms an analogue filter to a digital filter using the given mode
+ * and bilinear transform.
  * @param analog The analogue filter in zero-pole-gain representation
  * @param fc The cutoff frequency
  * @param fs The sampling frequency
@@ -110,8 +111,8 @@ enum Type {
 ZPK analog2digital(ZPK analog, double fc, double fs, Mode mode);
 
 /**
- * Transforms an analogue filter to a digital bandpass or bandstop filter using
- * the bilinear transform.
+ * Transforms an analogue filter to a digital bandpass or bandstop filter
+ * using the bilinear transform.
  * @param analog The analogue filter in zero-pole-gain representation
  * @param fLow The lower cutoff frequency
  * @param fHigh The upper cutoff frequency
@@ -166,9 +167,8 @@ ZPK lp2bp(const ZPK& input, const double wc, const double bw);
 ZPK lp2bs(const ZPK& input, const double wc, const double bw);
 
 /**
- * Computes the frequency response of a digital filter given in zero-pole-gain
- * form.
- *
+ * Computes the frequency response of a digital filter given in
+ * zero-pole-gain form.
  * @param digitalFilter The digital filter in zero-pole-gain representation
  * @param w The frequencies at which to compute the response
  * @return The frequency response as a vector of complex numbers

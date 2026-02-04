@@ -8,7 +8,7 @@
 
 /**
  * @file Node.h
- * @brief Node and Graph classes.
+ * Node and Graph classes.
  */
 namespace Nodex::Core {
 using PortID = std::size_t;
@@ -17,6 +17,9 @@ using NodeID = std::size_t;
 class Node;
 class Graph;
 
+/**
+ * Base class for Ports.
+ */
 class Port {
 public:
   Port(std::string_view name, Node* node);
@@ -46,9 +49,13 @@ protected:
   Node*       m_node{};
 };
 
+// OutPort and InPort implementations
 template <typename T>
 class InPort;
 
+/**
+ * Output Port class.
+ */
 template <typename T>
 class OutPort : public Port {
 public:
@@ -86,6 +93,9 @@ private:
   std::size_t             m_lastEvalFrame{0};
 };
 
+/**
+ * Input Port class.
+ */
 template <typename T>
 class InPort : public Port {
 public:
@@ -114,6 +124,9 @@ private:
   T           m_value{};
 };
 
+/**
+ * Node class representing a processing unit in the graph.
+ */
 class Node {
 public:
   Node(std::string_view name, std::string_view label);
@@ -186,6 +199,9 @@ protected:
   NodeID m_id{};
 };
 
+/**
+ * Graph class representing a collection of interconnected nodes.
+ */
 class Graph {
 public:
   template <typename T, typename... Args>
@@ -205,7 +221,12 @@ public:
   NodeID numberOfNodes() const { return m_nextNodeID; }
 
   nlohmann::json serialize() const;
-  
+
+  /**
+   * Connects an output port to an input port.
+   * @param outputPort The output port
+   * @param inputPort The input port
+   */
   void connect(Port* outputPort, Port* inputPort);
 
 private:

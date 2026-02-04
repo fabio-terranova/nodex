@@ -6,7 +6,7 @@
 
 /**
  * @file FilterEigen.h
- * @brief Eigen-based digital filter design and application functions.
+ * Eigen-based digital filter design and application functions.
  */
 namespace Nodex::Filter {
 using Eigen::ArrayXcd;
