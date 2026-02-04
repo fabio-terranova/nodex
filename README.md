@@ -2,7 +2,7 @@
 
 A visual node-based graph editor for digital signal processing.
 
-![Nodex GUI Preview](https://github.com/user-attachments/assets/0784dfbe-ab51-48c7-81fd-736d5df205d6)
+![Nodex GUI Preview](https://github.com/user-attachments/assets/67cc4b52-fd08-4a48-bbcb-f8c42f8633ff)
 
 ## Features
 
