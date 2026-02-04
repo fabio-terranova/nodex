@@ -272,9 +272,9 @@ void FilterNode::render() {
   ImGui::SliderInt("Order", &m_filterOrder, 1, 10);
 
   if (m_filterMode == Mode::bandpass || m_filterMode == Mode::bandstop) {
-    ImGui::SliderDouble("f_low (Hz)", &m_cutoffFreq, 1.0, m_samplingFreq / 2,
+    ImGui::SliderDouble("f low (Hz)", &m_cutoffFreq, 1.0, m_samplingFreq / 2,
                         "%.1f");
-    ImGui::SliderDouble("f_high (Hz)", &m_cutoffFreq2, m_cutoffFreq,
+    ImGui::SliderDouble("f high (Hz)", &m_cutoffFreq2, m_cutoffFreq,
                         m_samplingFreq / 2, "%.1f");
   } else {
     ImGui::SliderDouble("fc (Hz)", &m_cutoffFreq, 1.0, m_samplingFreq / 2,
