@@ -1,36 +1,76 @@
 # Nodex
 
-A visual node-based graph editor for digital signal processing.
+A visual node-based graph editor for digital signal processing (DSP).
 
 ![Nodex GUI Preview](https://github.com/user-attachments/assets/67cc4b52-fd08-4a48-bbcb-f8c42f8633ff)
 
 ## Features
 
-- **Visual node editor**: Intuitive interface for creating signal processing
- graphs.
-- **Node management**: Create, delete, and configure signal processing nodes.
-- **Graph persistence**: Save and load node graphs for reproducible workflows.
-- **Built-in nodes**: Common signal processing operations (filters, mixers,
- viewers).
-- **Python bindings**: Access to core functionality via Python.
+- **Visual node editor**: Intuitive drag-and-drop interface for creating signal processing graphs
+- **Node management**: Create, delete, and configure signal processing nodes with context menus
+- **Graph persistence**: Save and load node graphs in JSON format for reproducible workflows
+- **Built-in nodes**: Common signal processing operations including:
+  - IIR/FIR digital filters
+  - Signal generators
+  - Mixer
+  - Visualization nodes
+- **Python bindings**: Access to core DSP functionality via Python
+
+## Requirements
+
+- **CMake** 3.16 or higher
+- **C++ compiler** with C++20 support (GCC, Clang, or MSVC)
+- **OpenGL** 
+- **OpenMP** (for parallel processing)
+- **Python 3.x** (for Python bindings)
 
 ### Dependencies
 
-The project uses the following external libraries:
+The project uses the following third-party libraries (included as submodules):
 
-- **Eigen**: Linear algebra library
-- **ImGui**: GUI framework
-- **ImPlot**: Plotting library
-- **JSON (nlohmann)**: JSON library 
-- **pybind11**: C++-Python bindings
+- **[Eigen](https://libeigen.gitlab.io/)**: Linear algebra library
+- **[ImGui](https://github.com/ocornut/imgui)**: Immediate mode GUI framework
+- **[ImPlot](https://github.com/epezent/implot)**: Real-time plotting library for ImGui
+- **[GLFW](https://www.glfw.org/)**: OpenGL window and input management
+- **[nlohmann/json](https://github.com/nlohmann/json)**: Modern C++ JSON library
+- **[pybind11](https://github.com/pybind/pybind11)**: C++/Python interoperability
+- **[Native File Dialog Extended](https://github.com/btzy/nativefiledialog-extended)**: Cross-platform file dialog library
+
+All dependencies are managed via CMake and included in the `external/` directory.
 
 ## Building
 
+### Quick Start
+
 ```bash
+# Clone the repository with submodules
+git clone --recursive https://github.com/fabio-terranova/nodex.git
+cd nodex
+
+# Create build directory and configure
 mkdir -p build
 cd build
 cmake ..
+```
+
+### Building
+
+To build the entire project:
+
+```bash
 cmake --build .
+```
+
+To only build the GUI application:
+
+```bash
+cmake --build . --target nodex_gui
+```
+
+To only build the Python bindings:
+
+```bash
+cmake --build . --target pynodex
 ```
 
 ## Project Structure
@@ -53,34 +93,53 @@ cmake --build .
 
 ### Running the GUI Application
 
+After building, run the graphical interface:
+
 ```bash
 ./build/bin/nodex_gui
 ```
 
-- Right-click for context menu
-- Create nodes from the menu
-- Drag connections between node ports
-- Save/load graphs via File menu
+#### Basic Controls
 
-### Python Scripting
+- **Right-click** on canvas to open the context menu
+- **Create nodes** by selecting from the context menu
+- **Connect nodes** by dragging from an input/output port to an output/input port
+- **Save/Load graphs** via the File menu
 
-Example scripts are located in `examples/`:
+### Python Bindings
 
-```bash
-python examples/<example_script>.py
-```
+#### Installation
 
-To use the Python bindings:
+After building, the Python module is located in `build/lib/`. To use it, ensure that this directory is in your `PYTHONPATH`.
+
+#### Example Usage
 
 ```python
 import pynodex
+import numpy as np
+from scipy import signal
+
+# Design an IIR filter
+order = 5
+fc = 400  # cutoff frequency
+fs = 10000  # sampling rate
+b, a = signal.iirfilter(order, fc, fs=fs, btype='low', ftype='butter')
+
+# Create filter object
+filt = pynodex.Filter(b, a)
+
+# Process signal
+input_signal = np.random.randn(1000)
+output_signal = filt.process(input_signal)
 ```
 
-Ensure the `pynodex` module is accessible in your `PYTHONPATH`.
+See `examples/` directory for more complete examples:
+- `test_lfilter.py` - Basic IIR filtering example
+- `test_lfilter_multi.py` - Multi-channel filtering example
 
 ## License
 
-See [LICENSE](LICENSE) for details.
+This project is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE) for full details.
 
 ## Contributing
 
