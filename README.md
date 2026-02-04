@@ -108,30 +108,9 @@ After building, run the graphical interface:
 
 ### Python Bindings
 
-#### Installation
-
 After building, the Python module is located in `build/lib/`. To use it, ensure that this directory is in your `PYTHONPATH`.
 
 #### Example Usage
-
-```python
-import pynodex
-import numpy as np
-from scipy import signal
-
-# Design an IIR filter
-order = 5
-fc = 400  # cutoff frequency
-fs = 10000  # sampling rate
-b, a = signal.iirfilter(order, fc, fs=fs, btype='low', ftype='butter')
-
-# Create filter object
-filt = pynodex.Filter(b, a)
-
-# Process signal
-input_signal = np.random.randn(1000)
-output_signal = filt.process(input_signal)
-```
 
 See `examples/` directory for more complete examples:
 - `test_lfilter.py` - Basic IIR filtering example
