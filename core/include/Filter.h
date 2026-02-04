@@ -85,8 +85,8 @@ Coeffs zpk2tf(const ZPK& zpk);
 enum Mode {
   lowpass,
   highpass,
-  bandpass, // TODO: implement
-  bandstop, // TODO: implement
+  bandpass,
+  bandstop,
   maxMode,
 };
 

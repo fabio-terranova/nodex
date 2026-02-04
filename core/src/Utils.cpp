@@ -1,12 +1,12 @@
 #include "Utils.h"
+#include "Eigen/Core"
 #include <fstream>
 #include <iomanip>
 #include <sstream>
 #include <stdexcept>
+#include <unsupported/Eigen/FFT>
 
-namespace Nodex {
-namespace Utils {
-
+namespace Nodex::Utils {
 // Helper function to trim whitespace from string
 static std::string trim(const std::string& str) {
   size_t first = str.find_first_not_of(" \t\r\n");
@@ -130,8 +130,9 @@ CsvData loadCsvData(const std::string& filePath) {
       try {
         row.push_back(std::stod(tok));
       } catch (const std::exception& e) {
-        throw std::runtime_error("Invalid numeric value '" + tok + "' at line " +
-                                 std::to_string(lineNum) + ": " + e.what());
+        throw std::runtime_error("Invalid numeric value '" + tok +
+                                 "' at line " + std::to_string(lineNum) + ": " +
+                                 e.what());
       }
     }
     allRows.push_back(row);
@@ -218,5 +219,32 @@ void saveCsvData(const std::string& filePath, const CsvData& data,
   }
 }
 
-} // namespace Utils
-} // namespace Nodex
+Eigen::ArrayXd computeFFT(const Eigen::Ref<const Eigen::VectorXd>& signal) {
+  Eigen::FFT<double> fft;
+
+  Eigen::VectorXcd freqDomain;
+  fft.fwd(freqDomain, signal);
+
+  return freqDomain.cwiseAbs().real();
+}
+
+Eigen::ArrayXd generateTimeVector(const Eigen::Index length, const double fs) {
+  Eigen::ArrayXd result(length);
+
+  for (Eigen::Index i{0}; i < length; ++i) {
+    result(i) = static_cast<double>(i) / fs;
+  }
+  return result;
+}
+
+Eigen::ArrayXd generateFrequencyVector(const Eigen::Index length,
+                                       const double       fs) {
+  Eigen::ArrayXd result(length);
+
+  const double df = fs / static_cast<double>(length);
+  for (Eigen::Index i{0}; i < length; ++i) {
+    result(i) = static_cast<double>(i) * df;
+  }
+  return result;
+}
+} // namespace Nodex::Utils

@@ -3,6 +3,7 @@
 #include "nlohmann/json.hpp"
 #include <cstddef>
 #include <functional>
+#include <iostream>
 #include <map>
 #include <stdexcept>
 #include <string>
@@ -63,27 +64,31 @@ Core::Node* createFilter(Core::Graph& graph, const std::string& nodeName,
                          const nlohmann::json& params) {
   using namespace Constants;
 
-  auto   mode  = params.contains("filter_mode")
-                     ? static_cast<Filter::Mode>(params["filter_mode"].get<int>())
+  auto   mode  = params.contains("mode")
+                     ? static_cast<Filter::Mode>(params["mode"].get<int>())
                      : kDefaultFilterMode;
-  auto   type  = params.contains("filter_type")
-                     ? static_cast<Filter::Type>(params["filter_type"].get<int>())
+  auto   type  = params.contains("type")
+                     ? static_cast<Filter::Type>(params["type"].get<int>())
                      : kDefaultFilterType;
-  int    order = params.contains("filter_order")
-                     ? params["filter_order"].get<int>()
-                     : kDefaultFilterOrder;
+  int    order = params.contains("order") ? params["order"].get<int>()
+                                          : kDefaultFilterOrder;
   double cutoffFreq =
       params.contains("fc") ? params["fc"].get<double>() : kDefaultCutoffFreq;
   double samplingFreq =
       params.contains("fs") ? params["fs"].get<double>() : kDefaultSamplingFreq;
+  double cutoffFreq2 = params.contains("fc2") ? params["fc2"].get<double>()
+                                              : kDefaultCutoffFreq2;
 
   return graph.createNode<FilterNode>(nodeName, mode, type, order, cutoffFreq,
-                                      samplingFreq);
+                                      samplingFreq, cutoffFreq2);
 }
 
 Core::Node* createViewer(Core::Graph& graph, const std::string& nodeName,
-                         [[maybe_unused]] const nlohmann::json& params) {
-  return graph.createNode<ViewerNode>(nodeName);
+                         const nlohmann::json& params) {
+  const double fs = params.contains("fs") ? params["fs"].get<double>()
+                                          : Constants::kDefaultSamplingFreq;
+
+  return graph.createNode<ViewerNode>(nodeName, fs);
 }
 
 Core::Node* createMultiViewer(Core::Graph& graph, const std::string& nodeName,
@@ -176,8 +181,7 @@ Core::Graph loadFromJson(const std::string& jsonString) {
       if (nodeJson.contains("outputs")) {
         for (const auto& outputJson : nodeJson["outputs"]) {
           std::string outputPortName = outputJson["name"].get<std::string>();
-          Core::Port* outputPort =
-              sourceNode->outputPort(outputPortName);
+          Core::Port* outputPort     = sourceNode->outputPort(outputPortName);
 
           if (outputJson.contains("connections")) {
             for (const auto& connJson : outputJson["connections"]) {
@@ -198,22 +202,20 @@ Core::Graph loadFromJson(const std::string& jsonString) {
                     "Target node not found for connection: " + targetNodeName);
               }
 
-              Core::Port* targetPort =
-                  targetNode->inputPort(targetPortName);
+              Core::Port* targetPort = targetNode->inputPort(targetPortName);
 
               // Connect the ports
               graph.connect(outputPort, targetPort);
             }
           }
+        }
       }
     }
+  } catch (const nlohmann::json::exception& e) {
+    throw std::runtime_error(std::string("JSON parsing error: ") + e.what());
   }
-}
-catch (const nlohmann::json::exception& e) {
-  throw std::runtime_error(std::string("JSON parsing error: ") + e.what());
-}
 
-return graph;
+  return graph;
 }
 
 } // namespace Nodex::Gui::Serializer

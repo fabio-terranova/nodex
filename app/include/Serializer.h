@@ -19,7 +19,8 @@ namespace Serializer {
  *
  * @param jsonString JSON representation of the graph
  * @return Deserialized graph
- * @throws std::runtime_error if JSON is malformed or contains unknown node types
+ * @throws std::runtime_error if JSON is malformed or contains unknown node
+ * types
  */
 Core::Graph loadFromJson(const std::string& jsonString);
 

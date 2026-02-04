@@ -78,9 +78,9 @@ RowMajorMatrixXd linearFilter(const EigenCoeffs&&                       filter,
  * @param state The filter state (should be maintained between calls)
  * @return The filtered output signal
  */
-ArrayXd          linearFilter(const EigenCoeffs&               filter,
-                              const Eigen::Ref<const ArrayXd>& x,
-                              Eigen::Ref<ArrayXd>              state);
+ArrayXd linearFilter(const EigenCoeffs&               filter,
+                     const Eigen::Ref<const ArrayXd>& x,
+                     Eigen::Ref<ArrayXd>              state);
 
 /**
  * Applies a linear filter to the input signal x using the given filter
@@ -89,8 +89,8 @@ ArrayXd          linearFilter(const EigenCoeffs&               filter,
  * @param x The input signal
  * @return The filtered output signal
  */
-ArrayXd          linearFilter(const EigenCoeffs&               filter,
-                              const Eigen::Ref<const ArrayXd>& x);
+ArrayXd linearFilter(const EigenCoeffs&               filter,
+                     const Eigen::Ref<const ArrayXd>& x);
 
 /**
  * Applies an FFT-based filter to the input signal x using the given filter

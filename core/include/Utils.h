@@ -1,6 +1,7 @@
 #ifndef INCLUDE_INCLUDE_UTILS_H_
 #define INCLUDE_INCLUDE_UTILS_H_
 
+#include "Eigen/Core"
 #include <Eigen/Dense>
 #include <chrono>
 #include <complex>
@@ -80,6 +81,29 @@ void saveCsvData(const std::string& filePath, const Eigen::ArrayXd& data,
 void saveCsvData(const std::string& filePath, const CsvData& data,
                  int precision = 6);
 
+/**
+ * Computes the Fast Fourier Transform (FFT) of a real-valued signal.
+ * @param signal Input real-valued signal
+ * @return Complex-valued FFT of the input signal
+ */
+Eigen::ArrayXd computeFFT(const Eigen::Ref<const Eigen::VectorXd>& signal);
+
+/**
+ * Generates a time vector given the length and sampling frequency.
+ * @param length Length of the signal in samples
+ * @param fs Sampling frequency in Hz
+ * @return Time vector as an Eigen array
+ */
+Eigen::ArrayXd generateTimeVector(const Eigen::Index length, const double fs);
+
+/**
+ * Generates a frequency vector given the length and sampling frequency.
+ * @param length Length of the signal in samples
+ * @param fs Sampling frequency in Hz
+ * @return Frequency vector as an Eigen array
+ */
+Eigen::ArrayXd generateFrequencyVector(const Eigen::Index length,
+                                       const double       fs);
 } // namespace Nodex::Utils
 
 #endif // INCLUDE_INCLUDE_UTILS_H_

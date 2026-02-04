@@ -39,10 +39,14 @@ void graphWindow(Core::Graph& graph);
 
 class ViewerNode : public Core::Node {
 public:
-  ViewerNode(const std::string_view name);
+  ViewerNode(const std::string_view name,
+             const double samplingFreq = Constants::kDefaultSamplingFreq);
 
   void           render() override;
   nlohmann::json serialize() const override;
+
+private:
+  double m_samplingFreq{};
 };
 
 class MultiViewerNode : public Core::Node {

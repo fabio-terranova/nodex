@@ -1,5 +1,6 @@
 #include "Gui.h"
 #include "Core.h"
+#include "Eigen/Core"
 #include "FilterEigen.h"
 #include "Serializer.h"
 #include "Utils.h"
@@ -94,19 +95,47 @@ nlohmann::json MixerNode::serialize() const {
 }
 
 // ViewerNode
-ViewerNode::ViewerNode(const std::string_view name) : Node{name, "Viewer"} {
+ViewerNode::ViewerNode(const std::string_view name, const double samplingFreq)
+    : Node{name, "Viewer"}, m_samplingFreq{samplingFreq} {
   addInput<Eigen::ArrayXd>("In", Eigen::ArrayXd{});
 }
 
 void ViewerNode::render() {
   using namespace Constants;
+  using namespace Utils;
 
   auto data{inputValue<Eigen::ArrayXd>("In")};
   if (data.size() > 0) {
-    if (ImPlot::BeginPlot("Time plot", ImVec2{kPlotWidth, kPlotHeight})) {
-      ImPlot::PlotLine("", data.data(), static_cast<int>(data.size()));
-      ImPlot::EndPlot();
+    ImGui::InputDouble("fs (Hz)", &m_samplingFreq, 10.0, 100.0, "%.2f");
+
+    ImGui::BeginTabBar("Plots");
+    if (ImGui::BeginTabItem("Time")) {
+      if (ImPlot::BeginPlot("Time plot", ImVec2{kPlotWidth, kPlotHeight})) {
+        auto x{generateTimeVector(data.size(), m_samplingFreq)};
+        ImPlot::SetupAxis(ImAxis_X1, "Time (s)");
+        ImPlot::SetupAxis(ImAxis_Y1, "Amplitude");
+        ImPlot::PlotLine("", x.data(), data.data(),
+                         static_cast<int>(data.size()));
+        ImPlot::EndPlot();
+      }
+      ImGui::EndTabItem();
     }
+    if (ImGui::BeginTabItem("Frequency")) {
+      auto fft{computeFFT(data)};
+
+      if (ImPlot::BeginPlot("Frequency plot",
+                            ImVec2{kPlotWidth, kPlotHeight})) {
+        auto x{generateFrequencyVector(fft.size(), m_samplingFreq)};
+        ImPlot::SetupAxis(ImAxis_X1, "Frequency (Hz)");
+        ImPlot::SetupAxis(ImAxis_Y1, "Magnitude");
+        ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
+        ImPlot::PlotLine("", x.data(), fft.data(),
+                         static_cast<int>(fft.size()));
+        ImPlot::EndPlot();
+      }
+      ImGui::EndTabItem();
+    }
+    ImGui::EndTabBar();
   } else {
     ImGui::Text("No data connected.");
   }
@@ -115,6 +144,9 @@ void ViewerNode::render() {
 nlohmann::json ViewerNode::serialize() const {
   nlohmann::json j = Node::serialize();
   j["type"]        = "ViewerNode";
+  j["parameters"]  = {
+      {"fs", m_samplingFreq}
+  };
 
   return j;
 }
@@ -292,8 +324,8 @@ nlohmann::json FilterNode::serialize() const {
       { "type", static_cast<int>(m_filterType)},
       {"order",                  m_filterOrder},
       {   "fc",                   m_cutoffFreq},
+      {   "fs",                 m_samplingFreq},
       {  "fc2",                  m_cutoffFreq2},
-      {   "fs",                 m_samplingFreq}
   };
 
   return j;
