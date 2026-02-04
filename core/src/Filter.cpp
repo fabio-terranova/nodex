@@ -1,12 +1,14 @@
+#include "Filter.h"
 #include "FilterEigen.h"
 #include "Utils.h"
 #include <Eigen/Dense>
+#include <cassert>
+#include <cmath>
+#include <numbers>
 #include <ostream>
 #include <ranges>
 #include <unsupported/Eigen/FFT>
 #include <vector>
-#include <cassert>
-#include <numbers>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -63,18 +65,33 @@ std::ostream& operator<<(std::ostream& os, const ZPK& zpk) {
 }
 
 ZPK analog2digital(ZPK analog, double fc, double fs, Mode mode = lowpass) {
-  assert(mode == lowpass or mode == highpass and
-                                "iirFilter(): only lowPass and highPass are "
-                                "implemented for single cutoff frequency");
-
   fc /= (fs / 2);
   fs = 2.0;
   const double warped{2.0 * fs * std::tan(std::numbers::pi * fc / fs)};
 
-  if (mode == lowpass)
+  if (mode == Mode::lowpass)
     analog = lp2lp(analog, warped);
-  else if (mode == highpass) {
+  else if (mode == Mode::highpass) {
     analog = lp2hp(analog, warped);
+  }
+
+  return bilinearTransform(analog, fs);
+}
+
+ZPK analog2digital(ZPK analog, double fl, double fh, double fs, Mode mode) {
+  double fc{std::sqrt(fl * fh)};
+  double bw{fh - fl};
+
+  fc /= (fs / 2);
+  bw /= (fs / 2);
+  fs = 2.0;
+  const double fcWarped{2.0 * fs * std::tan(std::numbers::pi * fc / fs)};
+  const double bwWarped{2.0 * fs * std::tan(std::numbers::pi * bw / fs)};
+
+  if (mode == Mode::bandpass) {
+    analog = lp2bp(analog, fcWarped, bwWarped);
+  } else if (mode == Mode::bandstop) {
+    analog = lp2bs(analog, fcWarped, bwWarped);
   }
 
   return bilinearTransform(analog, fs);
@@ -179,6 +196,26 @@ ZPK iirFilter(const int n, double fc, double fs, const Type type,
   }
 
   return analog2digital(analogFilter, fc, fs, mode);
+}
+
+ZPK iirFilter(const int n, double fLow, double fHigh, double fs,
+              const Type type, const Mode mode, const double param) {
+  ZPK analogFilter{};
+  switch (type) {
+  case butter:
+    analogFilter = buttap(n);
+    break;
+  case cheb1:
+    analogFilter = cheb1ap(n, param);
+    break;
+  case cheb2:
+    analogFilter = cheb2ap(n, param);
+    break;
+  default:
+    break;
+  }
+
+  return analog2digital(analogFilter, fLow, fHigh, fs, mode);
 }
 
 double warpFreq(const double fc, const double fs) {
@@ -298,6 +335,84 @@ ZPK lp2hp(const ZPK& input, const double wc) {
     EigenMap<ArrayXcd>(output.z.data() + input.z.size(),
                        static_cast<Index>(degree))
         .setZero();
+  }
+
+  output.k = input.k * std::real((-iz).prod() / (-ip).prod());
+
+  return output;
+}
+
+ZPK lp2bp(const ZPK& input, const double wc, const double bw) {
+  const auto degree = input.p.size() - input.z.size();
+
+  ZPK output{};
+  output.z.resize(2 * input.z.size() + degree);
+  output.p.resize(2 * input.p.size());
+
+  EigenMap<ArrayXcd> oz(output.z.data(), static_cast<Index>(output.z.size()));
+  EigenMap<ArrayXcd> op(output.p.data(), static_cast<Index>(output.p.size()));
+
+  EigenMap<const ArrayXcd> iz(input.z.data(),
+                              static_cast<Index>(input.z.size()));
+  EigenMap<const ArrayXcd> ip(input.p.data(),
+                              static_cast<Index>(input.p.size()));
+
+  if (iz.size() > 0) {
+    ArrayXcd z_lp{iz * (bw / 2.0)};
+    ArrayXcd term{(z_lp.square() - (wc * wc)).sqrt()};
+    oz.head(iz.size())               = z_lp + term;
+    oz.segment(iz.size(), iz.size()) = z_lp - term;
+  }
+
+  if (degree > 0) {
+    oz.tail(degree).setZero();
+  }
+
+  if (ip.size() > 0) {
+    ArrayXcd p_lp{ip * (bw / 2.0)};
+    ArrayXcd term{(p_lp.square() - (wc * wc)).sqrt()};
+    op.head(ip.size()) = p_lp + term;
+    op.tail(ip.size()) = p_lp - term;
+  }
+
+  output.k = input.k * std::pow(bw, degree);
+
+  return output;
+}
+
+ZPK lp2bs(const ZPK& input, const double wc, const double bw) {
+  const auto degree{input.p.size() - input.z.size()};
+
+  ZPK output{};
+  output.z.resize(2 * input.z.size() + 2 * degree);
+  output.p.resize(2 * input.p.size());
+
+  EigenMap<ArrayXcd> oz(output.z.data(), static_cast<Index>(output.z.size()));
+  EigenMap<ArrayXcd> op(output.p.data(), static_cast<Index>(output.p.size()));
+
+  EigenMap<const ArrayXcd> iz(input.z.data(),
+                              static_cast<Index>(input.z.size()));
+  EigenMap<const ArrayXcd> ip(input.p.data(),
+                              static_cast<Index>(input.p.size()));
+
+  if (iz.size() > 0) {
+    ArrayXcd z_hp{(bw / 2.0) * iz.cwiseInverse()};
+    ArrayXcd term{(z_hp.square() - (wc * wc)).sqrt()};
+    oz.head(iz.size())               = z_hp + term;
+    oz.segment(iz.size(), iz.size()) = z_hp - term;
+  }
+
+  if (degree > 0) {
+    oz.segment(2 * static_cast<Index>(input.z.size()), degree)
+        .setConstant(std::complex<double>(0, wc));
+    oz.tail(degree).setConstant(std::complex<double>(0, -wc));
+  }
+
+  if (ip.size() > 0) {
+    ArrayXcd p_hp      = (bw / 2.0) * ip.cwiseInverse();
+    ArrayXcd term      = (p_hp.square() - (wc * wc)).sqrt();
+    op.head(ip.size()) = p_hp + term;
+    op.tail(ip.size()) = p_hp - term;
   }
 
   output.k = input.k * std::real((-iz).prod() / (-ip).prod());

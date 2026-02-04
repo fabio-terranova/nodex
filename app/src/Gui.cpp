@@ -227,15 +227,24 @@ nlohmann::json SineNode::serialize() const {
 FilterNode::FilterNode(const std::string_view    name,
                        const Nodex::Filter::Mode mode,
                        const Nodex::Filter::Type type, const int order,
-                       const double cutoffFreq, const double samplingFreq)
+                       const double cutoffFreq, const double samplingFreq,
+                       const double cutoffFreq2)
     : Node{name, "Filter"}, m_filterMode{mode}, m_filterType{type},
       m_filterOrder{order}, m_cutoffFreq{cutoffFreq},
-      m_samplingFreq{samplingFreq} {
+      m_samplingFreq{samplingFreq}, m_cutoffFreq2{cutoffFreq2} {
   addInput<Eigen::ArrayXd>("In", Eigen::ArrayXd{});
   addOutput<Eigen::ArrayXd>("Out", [this]() {
     auto inputData{inputValue<Eigen::ArrayXd>("In")};
-    auto filterCoeffs{iirFilter(m_filterOrder, m_cutoffFreq, m_samplingFreq,
-                                m_filterType, m_filterMode)};
+    ZPK  filterCoeffs{};
+
+    if (m_filterMode == Mode::bandpass || m_filterMode == Mode::bandstop) {
+      filterCoeffs = iirFilter(m_filterOrder, m_cutoffFreq, m_cutoffFreq2,
+                               m_samplingFreq, m_filterType, m_filterMode);
+    } else {
+      filterCoeffs = iirFilter(m_filterOrder, m_cutoffFreq, m_samplingFreq,
+                               m_filterType, m_filterMode);
+    }
+
     EigenCoeffs filter{};
     filter = zpk2tf(EigenZPK(filterCoeffs));
 
@@ -247,7 +256,8 @@ void FilterNode::render() {
   ImGui::Text("Parameters:");
   static constexpr const char* filterTypes[] = {"Butterworth", "Chebyshev I",
                                                 "Chebyshev II"};
-  static constexpr const char* filterModes[] = {"Lowpass", "Highpass"};
+  static constexpr const char* filterModes[] = {"Lowpass", "Highpass",
+                                                "Bandpass", "Bandstop"};
 
   int filterTypeIdx = static_cast<int>(m_filterType);
   if (ImGui::Combo("Type", &filterTypeIdx, filterTypes, 3)) {
@@ -255,13 +265,22 @@ void FilterNode::render() {
   }
 
   int filterModeIdx = static_cast<int>(m_filterMode);
-  if (ImGui::Combo("Mode", &filterModeIdx, filterModes, 2)) {
+  if (ImGui::Combo("Mode", &filterModeIdx, filterModes, 4)) {
     m_filterMode = static_cast<Mode>(filterModeIdx);
   }
 
   ImGui::SliderInt("Order", &m_filterOrder, 1, 10);
-  ImGui::SliderDouble("fc (Hz)", &m_cutoffFreq, 1.0, m_samplingFreq / 2,
-                      "%.1f");
+
+  if (m_filterMode == Mode::bandpass || m_filterMode == Mode::bandstop) {
+    ImGui::SliderDouble("f_low (Hz)", &m_cutoffFreq, 1.0, m_samplingFreq / 2,
+                        "%.1f");
+    ImGui::SliderDouble("f_high (Hz)", &m_cutoffFreq2, m_cutoffFreq,
+                        m_samplingFreq / 2, "%.1f");
+  } else {
+    ImGui::SliderDouble("fc (Hz)", &m_cutoffFreq, 1.0, m_samplingFreq / 2,
+                        "%.1f");
+  }
+
   ImGui::SliderDouble("fs (Hz)", &m_samplingFreq, 10.0, 10000.0, "%.1f");
 }
 
@@ -273,6 +292,7 @@ nlohmann::json FilterNode::serialize() const {
       { "type", static_cast<int>(m_filterType)},
       {"order",                  m_filterOrder},
       {   "fc",                   m_cutoffFreq},
+      {  "fc2",                  m_cutoffFreq2},
       {   "fs",                 m_samplingFreq}
   };
 

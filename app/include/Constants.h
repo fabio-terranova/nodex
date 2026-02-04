@@ -45,6 +45,7 @@ constexpr Filter::Mode kDefaultFilterMode  = Filter::Mode::lowpass;
 constexpr Filter::Type kDefaultFilterType  = Filter::Type::butter;
 constexpr int          kDefaultFilterOrder = 2;
 constexpr double       kDefaultCutoffFreq  = 100.0;
+constexpr double       kDefaultCutoffFreq2 = 200.0;
 
 } // namespace Nodex::Constants
 

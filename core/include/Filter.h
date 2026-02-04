@@ -104,10 +104,23 @@ enum Type {
  * @param analog The analogue filter in zero-pole-gain representation
  * @param fc The cutoff frequency
  * @param fs The sampling frequency
- * @param mode The filter mode (lowpass, highpass, etc.)
+ * @param mode The filter mode (lowpass or highpass)
  * @return The digital filter in zero-pole-gain representation
  */
 ZPK analog2digital(ZPK analog, double fc, double fs, Mode mode);
+
+/**
+ * Transforms an analogue filter to a digital bandpass or bandstop filter using
+ * the bilinear transform.
+ * @param analog The analogue filter in zero-pole-gain representation
+ * @param fLow The lower cutoff frequency
+ * @param fHigh The upper cutoff frequency
+ * @param fs The sampling frequency
+ * @param mode The filter mode (bandpass or bandstop)
+ * @return The digital filter in zero-pole-gain representation
+ */
+ZPK analog2digital(ZPK analog, double fLow, double fHigh, double fs,
+                   Mode mode = bandpass);
 
 /**
  * Applies the bilinear transform to an analogue filter.
@@ -133,6 +146,24 @@ ZPK lp2lp(const ZPK& input, const double wc);
  * @return The transformed highpass filter in zero-pole-gain representation
  */
 ZPK lp2hp(const ZPK& input, const double wc);
+
+/**
+ * Transforms a lowpass filter to a bandpass filter.
+ * @param input The input lowpass filter in zero-pole-gain representation
+ * @param wc The central frequency
+ * @param bw The bandwidth
+ * @return The transformed bandpass filter in zero-pole-gain representation
+ */
+ZPK lp2bp(const ZPK& input, const double wc, const double bw);
+
+/**
+ * Transforms a lowpass filter to a bandstop filter.
+ * @param input The input lowpass filter in zero-pole-gain representation
+ * @param wc The central frequency
+ * @param bw The bandwidth
+ * @return The transformed bandstop filter in zero-pole-gain representation
+ */
+ZPK lp2bs(const ZPK& input, const double wc, const double bw);
 
 /**
  * Computes the frequency response of a digital filter given in zero-pole-gain
@@ -188,6 +219,20 @@ ZPK iirFilter(const int n, double fc, double fs, const double param) {
  */
 ZPK iirFilter(const int n, double fc, double fs, const Type type = butter,
               const Mode mode = lowpass, const double param = 5.0);
+
+/**
+ * Designs a bandpass IIR filter using the given type.
+ * @param n The filter order
+ * @param fLow The lower cutoff frequency
+ * @param fHigh The upper cutoff frequency
+ * @param fs The sampling frequency
+ * @param type The filter type (butterworth, chebyshev, etc.)
+ * @param param Additional parameter for the prototype function (e.g., ripple)
+ * @return The designed digital filter in zero-pole-gain representation
+ */
+ZPK iirFilter(const int n, double fLow, double fHigh, double fs,
+              const Type type = butter, const Mode mode = bandpass,
+              const double param = 5.0);
 
 /**
  * Analogue Butterworth lowpass filter prototype.

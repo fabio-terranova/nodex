@@ -51,6 +51,7 @@ public:
 
   void           render() override;
   nlohmann::json serialize() const override;
+
 private:
   std::size_t m_inputs{};
 };
@@ -112,7 +113,8 @@ public:
              const Filter::Type     type       = Constants::kDefaultFilterType,
              const int              order      = Constants::kDefaultFilterOrder,
              const double           cutoffFreq = Constants::kDefaultCutoffFreq,
-             const double samplingFreq = Constants::kDefaultSamplingFreq);
+             const double samplingFreq = Constants::kDefaultSamplingFreq,
+             const double cutoffFreq2  = Constants::kDefaultCutoffFreq2);
 
   void           render() override;
   nlohmann::json serialize() const override;
@@ -123,6 +125,7 @@ private:
   int                 m_filterOrder{};
   double              m_cutoffFreq{};
   double              m_samplingFreq{};
+  double              m_cutoffFreq2{};
 };
 
 class CSVNode : public Core::Node {
