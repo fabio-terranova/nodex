@@ -2,7 +2,7 @@
 
 A visual node-based graph editor for digital signal processing (DSP).
 
-![Nodex GUI Preview](https://github.com/user-attachments/assets/67cc4b52-fd08-4a48-bbcb-f8c42f8633ff)
+![Nodex GUI Preview](https://github.com/user-attachments/assets/ed417127-8107-4560-af39-125b8943cbe5)
 
 ## Features
 
