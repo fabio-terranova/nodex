@@ -97,7 +97,10 @@ Core::Node* createMultiViewer(Core::Graph& graph, const std::string& nodeName,
                            ? params["inputs"].get<std::size_t>()
                            : Constants::kNumInputs;
 
-  return graph.createNode<MultiViewerNode>(nodeName, inputs);
+  const double fs = params.contains("fs") ? params["fs"].get<double>()
+                                          : Constants::kDefaultSamplingFreq;
+
+  return graph.createNode<MultiViewerNode>(nodeName, inputs, fs);
 }
 
 Core::Node* createCSV(Core::Graph& graph, const std::string& nodeName,

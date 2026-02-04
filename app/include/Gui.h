@@ -51,13 +51,15 @@ private:
 
 class MultiViewerNode : public Core::Node {
 public:
-  MultiViewerNode(const std::string_view name, const std::size_t inputs = 2);
+  MultiViewerNode(const std::string_view name, const std::size_t inputs = 2,
+                  const double samplingFreq = Constants::kDefaultSamplingFreq);
 
   void           render() override;
   nlohmann::json serialize() const override;
 
 private:
   std::size_t m_inputs{};
+  double      m_samplingFreq{};
 };
 
 class MixerNode : public Core::Node {

@@ -129,6 +129,8 @@ void ViewerNode::render() {
         ImPlot::SetupAxis(ImAxis_X1, "Frequency (Hz)");
         ImPlot::SetupAxis(ImAxis_Y1, "Magnitude");
         ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
+        ImPlot::SetupAxisScale(ImAxis_Y1, ImPlotScale_Log10);
+
         ImPlot::PlotLine("", x.data(), fft.data(),
                          static_cast<int>(fft.size()));
         ImPlot::EndPlot();
@@ -153,8 +155,10 @@ nlohmann::json ViewerNode::serialize() const {
 
 // MultiViewerNode
 MultiViewerNode::MultiViewerNode(const std::string_view name,
-                                 const std::size_t      inputs)
-    : Node{name, "Multi-Viewer"}, m_inputs{inputs} {
+                                 const std::size_t      inputs,
+                                 const double           samplingFreq)
+    : Node{name, "Multi-Viewer"}, m_inputs{inputs},
+      m_samplingFreq{samplingFreq} {
   for (std::size_t i{0}; i < m_inputs; ++i) {
     std::string portName = "In " + std::to_string(i + 1);
     addInput<Eigen::ArrayXd>(portName, Eigen::ArrayXd{});
@@ -163,24 +167,56 @@ MultiViewerNode::MultiViewerNode(const std::string_view name,
 
 void MultiViewerNode::render() {
   using namespace Constants;
+  using namespace Utils;
 
-  if (ImPlot::BeginPlot("Time plot", ImVec2{kPlotWidth, kPlotHeight})) {
-    for (std::size_t i{0}; i < m_inputs; ++i) {
-      auto data = inputValue<Eigen::ArrayXd>("In " + std::to_string(i + 1));
-      if (data.size() > 0) {
-        ImPlot::PlotLine(("Input " + std::to_string(i + 1)).c_str(),
-                         data.data(), static_cast<int>(data.size()));
+  ImGui::InputDouble("fs (Hz)", &m_samplingFreq, 10.0, 100.0, "%.2f");
+
+  ImGui::BeginTabBar("Plots");
+  if (ImGui::BeginTabItem("Time")) {
+    if (ImPlot::BeginPlot("Time plot", ImVec2{kPlotWidth, kPlotHeight})) {
+      ImPlot::SetupAxis(ImAxis_X1, "Time (s)");
+      ImPlot::SetupAxis(ImAxis_Y1, "Amplitude");
+
+      for (std::size_t i{0}; i < m_inputs; ++i) {
+        auto data = inputValue<Eigen::ArrayXd>("In " + std::to_string(i + 1));
+        if (data.size() > 0) {
+          auto x{generateTimeVector(data.size(), m_samplingFreq)};
+          ImPlot::PlotLine(("Input " + std::to_string(i + 1)).c_str(), x.data(),
+                           data.data(), static_cast<int>(data.size()));
+        }
       }
+      ImPlot::EndPlot();
     }
-    ImPlot::EndPlot();
+    ImGui::EndTabItem();
   }
+  if (ImGui::BeginTabItem("Frequency")) {
+    if (ImPlot::BeginPlot("Frequency plot", ImVec2{kPlotWidth, kPlotHeight})) {
+      ImPlot::SetupAxis(ImAxis_X1, "Frequency (Hz)");
+      ImPlot::SetupAxis(ImAxis_Y1, "Magnitude");
+      ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
+      ImPlot::SetupAxisScale(ImAxis_Y1, ImPlotScale_Log10);
+
+      for (std::size_t i{0}; i < m_inputs; ++i) {
+        auto data{inputValue<Eigen::ArrayXd>("In " + std::to_string(i + 1))};
+        auto fft{computeFFT(data)};
+        auto x{generateFrequencyVector(fft.size(), m_samplingFreq)};
+
+        ImPlot::PlotLine(("Input " + std::to_string(i + 1)).c_str(), x.data(),
+                         fft.data(), static_cast<int>(fft.size()));
+      }
+      ImPlot::EndPlot();
+    }
+    ImGui::EndTabItem();
+  }
+  ImGui::EndTabBar();
 }
 
 nlohmann::json MultiViewerNode::serialize() const {
   nlohmann::json j = Node::serialize();
   j["type"]        = "MultiViewerNode";
   j["parameters"]  = {
-      {"inputs", m_inputs}
+      {"inputs",       m_inputs},
+      {    "fs", m_samplingFreq},
   };
 
   return j;
@@ -683,8 +719,7 @@ void graphWindow(Graph& graph) {
   for (auto& node : graph.getNodes()) {
     // Closable window
     bool isOpen = true;
-    ImGui::Begin(getNodeWindowId(node).c_str(), &isOpen,
-                 ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::Begin(getNodeWindowId(node).c_str(), &isOpen);
 
     // Inputs in left column, outputs in right column
     ImGui::Columns(2, nullptr, false);
