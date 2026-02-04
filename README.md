@@ -21,7 +21,7 @@ The project uses the following external libraries:
 - **Eigen**: Linear algebra library
 - **ImGui**: GUI framework
 - **ImPlot**: Plotting library
-- **JSON (nlohmann)**: JSON serialization
+- **JSON (nlohmann)**: JSON library 
 - **pybind11**: C++-Python bindings
 
 ## Building
@@ -31,8 +31,6 @@ mkdir -p build
 cd build
 cmake ..
 cmake --build .
-# Or as a single command:
-# cmake .. && cmake --build .
 ```
 
 ## Project Structure
@@ -83,3 +81,7 @@ Ensure the `pynodex` module is accessible in your `PYTHONPATH`.
 ## License
 
 See [LICENSE](LICENSE) for details.
+
+## Contributing
+
+Contributions are welcome! Please open issues or pull requests on GitHub.
